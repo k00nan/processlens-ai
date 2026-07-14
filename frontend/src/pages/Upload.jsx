@@ -1,8 +1,10 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 const BACKEND_URL = "http://localhost:8000";
 
 export default function Upload() {
+  const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [columns, setColumns] = useState([]);
   const [mapping, setMapping] = useState({ caseId: "", activity: "", timestamp: "" });
@@ -34,6 +36,38 @@ export default function Upload() {
     e.preventDefault();
     setDragover(false);
     handleFile(e.dataTransfer.files[0]);
+  }
+
+  async function handleAnalyseStarten() {
+    if (!file) return;
+
+    setError(null);
+    setUploading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("case_id", mapping.caseId);
+    formData.append("activity", mapping.activity);
+    formData.append("timestamp", mapping.timestamp);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const { detail } = await response.json();
+        throw new Error(detail || "Upload fehlgeschlagen");
+      }
+
+      const data = await response.json();
+      navigate("/uebersicht", { state: { kpis: data.kpis, filename: data.filename } });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
@@ -71,24 +105,17 @@ export default function Upload() {
         />
       </div>
 
-      {uploading && (
-        <div className="mt-4 max-w-xl flex items-center gap-2 bg-primary-light text-purple-700 rounded-lg px-4 py-3">
-          <span className="material-symbols-outlined">hourglass_top</span>
-          <span>Datei wird hochgeladen…</span>
-        </div>
-      )}
-
-      {!uploading && error && (
-        <div className="mt-4 max-w-xl flex items-center gap-2 bg-red-50 text-red-700 rounded-lg px-4 py-3">
-          <span className="material-symbols-outlined">error</span>
-          <span>{error}</span>
-        </div>
-      )}
-
       {!uploading && !error && file && (
         <div className="mt-4 max-w-xl flex items-center gap-2 bg-green-50 text-green-700 rounded-lg px-4 py-3">
           <span className="material-symbols-outlined">check_circle</span>
-          <span>Datei erfolgreich geladen: {file.name}</span>
+          <span>Datei ausgewählt: {file.name}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-4 max-w-xl flex items-center gap-2 bg-red-50 text-red-700 rounded-lg px-4 py-3">
+          <span className="material-symbols-outlined">error</span>
+          <span>{error}</span>
         </div>
       )}
 
@@ -138,8 +165,12 @@ export default function Upload() {
               </div>
             </div>
             <div className="mt-6 text-center">
-              <button className="bg-primary text-white font-medium rounded-lg px-8 py-3 hover:bg-purple-700 transition-colors">
-                Analyse starten
+              <button
+                onClick={handleAnalyseStarten}
+                disabled={uploading}
+                className="bg-primary text-white font-medium rounded-lg px-8 py-3 hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploading ? "Wird hochgeladen…" : "Analyse starten"}
               </button>
             </div>
           </div>
