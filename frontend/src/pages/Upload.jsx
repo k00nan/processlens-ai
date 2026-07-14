@@ -2,13 +2,28 @@ import { useState, useRef } from "react";
 
 export default function Upload() {
   const [file, setFile] = useState(null);
+  const [columns, setColumns] = useState([]);
+  const [mapping, setMapping] = useState({ caseId: "", activity: "", timestamp: "" });
   const [dragover, setDragover] = useState(false);
   const inputRef = useRef(null);
 
   function handleFile(f) {
-    if (f && f.name.endsWith(".csv")) {
-      setFile(f);
-    }
+    if (!f || !f.name.endsWith(".csv")) return;
+
+    setFile(f);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const firstLine = e.target.result.split("\n")[0];
+      const headers = firstLine.split(/[,;]/).map((h) => h.trim().replace(/"/g, ""));
+      setColumns(headers);
+      setMapping({
+        caseId: headers.find((h) => /case/i.test(h)) || headers[0] || "",
+        activity: headers.find((h) => /activity|aktivit/i.test(h)) || headers[1] || "",
+        timestamp: headers.find((h) => /time|datum|date/i.test(h)) || headers[2] || "",
+      });
+    };
+    reader.readAsText(f);
   }
 
   function handleDrop(e) {
@@ -57,6 +72,65 @@ export default function Upload() {
           <span className="material-symbols-outlined">check_circle</span>
           <span>Datei erfolgreich geladen: {file.name}</span>
         </div>
+      )}
+
+      {columns.length > 0 && (
+        <>
+          <div className="mt-8 max-w-3xl border border-gray-200 rounded-xl p-6 bg-white">
+            <h2 className="text-lg font-semibold mb-1">Spalten zuordnen</h2>
+            <p className="text-gray-500 text-sm mb-5">
+              Ordnen Sie die Spalten Ihres Event Logs den entsprechenden Feldern zu.
+            </p>
+            <div className="grid grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Case-ID</label>
+                <select
+                  value={mapping.caseId}
+                  onChange={(e) => setMapping({ ...mapping, caseId: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  {columns.map((col) => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Aktivität</label>
+                <select
+                  value={mapping.activity}
+                  onChange={(e) => setMapping({ ...mapping, activity: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  {columns.map((col) => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Zeitstempel</label>
+                <select
+                  value={mapping.timestamp}
+                  onChange={(e) => setMapping({ ...mapping, timestamp: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  {columns.map((col) => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="mt-6 text-center">
+              <button className="bg-primary text-white font-medium rounded-lg px-8 py-3 hover:bg-purple-700 transition-colors">
+                Analyse starten
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 max-w-3xl flex items-center gap-2 bg-blue-50 text-blue-700 rounded-lg px-4 py-3 text-sm">
+            <span className="material-symbols-outlined text-blue-500">info</span>
+            Unterstütztes Format: CSV mit Spalten für Case-ID, Aktivität und Zeitstempel.
+          </div>
+        </>
       )}
     </div>
   );
