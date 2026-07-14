@@ -4,55 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ProcessLens AI</title>
-    <link rel="icon" href="logo.png">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#5121e6',
-                        'primary-light': '#ede7f6',
-                        'primary-hover': 'rgba(81, 33, 230, 0.2)',
-                        sidebar: '#0d0a39',
-                        surface: '#faf9fe',
-                        'border-purple': '#b39ddb',
-                    }
-                }
-            }
-        }
-    </script>
+    <link rel="icon" href="/logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
-    <link rel="stylesheet" href="style.css">
 </head>
-<body class="flex min-h-screen bg-surface">
-    <aside class="fixed top-0 left-0 h-screen w-64 bg-sidebar text-white flex flex-col p-6">
-        <div class="flex items-center gap-3 mb-8">
-            <img src="logo.png" alt="ProcessLens AI" class="w-10 h-10 object-contain">
-            <span class="text-lg font-bold">ProcessLens AI</span>
-        </div>
-        <nav class="flex flex-col gap-1">
-            <button class="nav-btn active" data-page="upload">
-                <span class="material-symbols-outlined">cloud_upload</span>
-                Upload
-            </button>
-            <button class="nav-btn" data-page="uebersicht">
-                <span class="material-symbols-outlined">home</span>
-                Übersicht
-            </button>
-            <button class="nav-btn" data-page="prozessanalyse">
-                <span class="material-symbols-outlined">show_chart</span>
-                Prozessanalyse
-            </button>
-            <button class="nav-btn" data-page="ki-auswertung">
-                <span class="material-symbols-outlined">chat</span>
-                KI-Auswertung
-            </button>
-        </nav>
-    </aside>
-
-    <main id="content" class="ml-64 flex-1 p-10"></main>
-
-    <script type="module" src="app.js"></script>
+<body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
