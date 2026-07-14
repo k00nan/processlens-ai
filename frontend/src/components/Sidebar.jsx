@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 
 const navItems = [
-  { path: "/", label: "Upload", icon: "cloud_upload" },
+  { path: "/upload", label: "Upload", icon: "cloud_upload" },
   { path: "/uebersicht", label: "Übersicht", icon: "home" },
   { path: "/prozessanalyse", label: "Prozessanalyse", icon: "show_chart" },
   { path: "/ki-auswertung", label: "KI-Auswertung", icon: "chat" },
@@ -19,7 +19,7 @@ export default function Sidebar() {
           <NavLink
             key={item.path}
             to={item.path}
-            end={item.path === "/"}
+            end
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                 isActive ? "bg-primary" : "hover:bg-primary-hover"
