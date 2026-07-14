@@ -8,6 +8,7 @@ router = APIRouter()
 @router.post("/upload")
 async def upload(file: UploadFile = File(...)):
     df = await datei_einlesen(file)
+    print(df)
     return {
         "filename": file.filename,
         "rows": len(df),
