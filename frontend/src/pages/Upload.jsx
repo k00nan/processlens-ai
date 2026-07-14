@@ -1,8 +1,10 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 const BACKEND_URL = "http://localhost:8000";
 
 export default function Upload() {
+  const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [columns, setColumns] = useState([]);
   const [mapping, setMapping] = useState({ caseId: "", activity: "", timestamp: "" });
@@ -44,6 +46,9 @@ export default function Upload() {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("case_id", mapping.caseId);
+    formData.append("activity", mapping.activity);
+    formData.append("timestamp", mapping.timestamp);
 
     try {
       const response = await fetch(`${BACKEND_URL}/upload`, {
@@ -56,7 +61,8 @@ export default function Upload() {
         throw new Error(detail || "Upload fehlgeschlagen");
       }
 
-      await response.json();
+      const data = await response.json();
+      navigate("/uebersicht", { state: { kpis: data.kpis, filename: data.filename } });
     } catch (err) {
       setError(err.message);
     } finally {
