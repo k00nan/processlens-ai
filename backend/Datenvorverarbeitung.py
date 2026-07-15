@@ -42,3 +42,32 @@ def durchlaufzeit_kpis(df: pd.DataFrame, case_col: str, activity_col: str, times
         "durchlaufzeit_durchschnitt_sekunden": float(durations_seconds.mean()),
         "durchlaufzeit_median_sekunden": float(durations_seconds.median()),
     }
+
+
+def engpassanalyse(df: pd.DataFrame, case_col: str, activity_col: str, timestamp_col: str) -> list[dict]:
+    """Berechnet die durchschnittliche Verweildauer pro Aktivität (Activity-Level Bottlenecks)."""
+    df = df.sort_values([case_col, timestamp_col]).copy()
+    df[timestamp_col] = pd.to_datetime(df[timestamp_col])
+
+    df["_next_timestamp"] = df.groupby(case_col)[timestamp_col].shift(-1)
+    df["_dauer_sekunden"] = (df["_next_timestamp"] - df[timestamp_col]).dt.total_seconds()
+
+    stats = (
+        df.dropna(subset=["_dauer_sekunden"])
+        .groupby(activity_col)["_dauer_sekunden"]
+        .agg(["mean", "median", "max", "count"])
+        .rename(columns={"mean": "durchschnitt", "median": "median", "max": "maximum", "count": "anzahl"})
+        .sort_values("durchschnitt", ascending=False)
+        .reset_index()
+    )
+
+    return [
+        {
+            "aktivitaet": row[activity_col],
+            "durchschnitt_sekunden": float(row["durchschnitt"]),
+            "median_sekunden": float(row["median"]),
+            "maximum_sekunden": float(row["maximum"]),
+            "anzahl": int(row["anzahl"]),
+        }
+        for _, row in stats.iterrows()
+    ]
