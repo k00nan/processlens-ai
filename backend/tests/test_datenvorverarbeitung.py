@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from fastapi import HTTPException, UploadFile
 
-from Datenvorverarbeitung import case_traces_fuer_llm, datei_einlesen
+from Datenvorverarbeitung import case_traces_fuer_llm, datei_einlesen, durchlaufzeit_kpis, engpassanalyse
 
 
 def _upload_file(inhalt: bytes, filename: str) -> UploadFile:
@@ -154,3 +154,84 @@ def test_mehrere_cases_werden_getrennt_aggregiert():
         {"case_id": "1", "trace": "Start -> End"},
         {"case_id": "2", "trace": "Start -> End"},
     ]
+
+
+def test_durchlaufzeit_kpis_berechnet_min_max_durchschnitt_und_median():
+    df = pd.DataFrame({
+        "case_id": ["1", "1", "1", "2", "2"],
+        "activity": ["Start", "Middle", "End", "Start", "End"],
+        "timestamp": pd.to_datetime([
+            "2020-01-01 00:00:00",
+            "2020-01-01 01:00:00",
+            "2020-01-01 03:00:00",
+            "2020-01-02 00:00:00",
+            "2020-01-02 00:10:00",
+        ]),
+    })
+
+    result = durchlaufzeit_kpis(df, "case_id", "activity", "timestamp")
+
+    assert result["anzahl_cases"] == 2
+    assert result["anzahl_events"] == 5
+    assert result["anzahl_aktivitaeten"] == 3
+    assert result["durchlaufzeit_min_sekunden"] == 600.0
+    assert result["durchlaufzeit_max_sekunden"] == 10800.0
+    assert result["durchlaufzeit_durchschnitt_sekunden"] == 5700.0
+    assert result["durchlaufzeit_median_sekunden"] == 5700.0
+
+
+def test_durchlaufzeit_kpis_filtert_sentinel_datum():
+    df = pd.DataFrame({
+        "case_id": ["1", "1", "1"],
+        "activity": ["Start", "End", "Fehlerhaft"],
+        "timestamp": pd.to_datetime([
+            "2020-01-01 00:00:00",
+            "2020-01-01 01:00:00",
+            "1899-12-30 23:19:32",
+        ]),
+    })
+
+    result = durchlaufzeit_kpis(df, "case_id", "activity", "timestamp")
+
+    assert result["anzahl_events"] == 2
+    assert result["durchlaufzeit_max_sekunden"] == 3600.0
+
+
+def test_engpassanalyse_berechnet_verweildauer_je_aktivitaet():
+    df = pd.DataFrame({
+        "case_id": ["1", "1", "1", "2", "2", "2"],
+        "activity": ["Start", "Middle", "End", "Start", "Middle", "End"],
+        "timestamp": pd.to_datetime([
+            "2020-01-01 00:00:00",
+            "2020-01-01 00:10:00",
+            "2020-01-01 00:40:00",
+            "2020-01-02 00:00:00",
+            "2020-01-02 00:05:00",
+            "2020-01-02 01:05:00",
+        ]),
+    })
+
+    result = engpassanalyse(df, "case_id", "activity", "timestamp")
+
+    assert [row["aktivitaet"] for row in result] == ["Middle", "Start"]
+
+    middle, start = result
+    assert middle["durchschnitt_sekunden"] == 2700.0
+    assert middle["median_sekunden"] == 2700.0
+    assert middle["maximum_sekunden"] == 3600.0
+    assert middle["anzahl"] == 2
+
+    assert start["durchschnitt_sekunden"] == 450.0
+    assert start["anzahl"] == 2
+
+
+def test_engpassanalyse_letzte_aktivitaet_je_case_hat_keine_verweildauer():
+    df = pd.DataFrame({
+        "case_id": ["1", "1"],
+        "activity": ["Start", "End"],
+        "timestamp": pd.to_datetime(["2020-01-01 00:00:00", "2020-01-01 01:00:00"]),
+    })
+
+    result = engpassanalyse(df, "case_id", "activity", "timestamp")
+
+    assert [row["aktivitaet"] for row in result] == ["Start"]
