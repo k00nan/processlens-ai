@@ -87,3 +87,21 @@ def engpassanalyse(df: pd.DataFrame, case_col: str, activity_col: str, timestamp
         }
         for _, row in stats.iterrows()
     ]
+
+
+def case_traces_fuer_llm(df: pd.DataFrame, case_col: str, activity_col: str, timestamp_col: str) -> list[dict]:
+    """Aggregiert die Aktivitäten je Case in zeitlicher Reihenfolge, als Grundlage für die LLM-Verarbeitung."""
+    for col in [case_col, activity_col, timestamp_col]:
+        if col not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Spalte '{col}' nicht in der Datei gefunden.")
+
+    df = df.copy()
+    df[timestamp_col] = _zeitstempel_vereinheitlichen(df[timestamp_col])
+    df = df.sort_values([case_col, timestamp_col])
+
+    traces = df.groupby(case_col)[activity_col].apply(lambda a: " -> ".join(a)).reset_index(name="trace")
+
+    return [
+        {"case_id": row[case_col], "trace": row["trace"]}
+        for _, row in traces.iterrows()
+    ]
