@@ -4,28 +4,67 @@ import pandas as pd
 from fastapi import HTTPException, UploadFile
 
 
-async def datei_einlesen(file: UploadFile) -> pd.DataFrame:
-    """Liest die vom Frontend hochgeladene CSV-Datei in einen DataFrame ein."""
+async def datei_einlesen(file: UploadFile, case_col: str, activity_col: str, timestamp_col: str) -> pd.DataFrame:
+    """Liest die vom Frontend hochgeladene CSV-Datei ein und validiert Spalten sowie Zeitstempel."""
     if not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Nur CSV-Dateien werden unterstützt.")
 
     inhalt = await file.read()
     try:
-        return pd.read_csv(io.BytesIO(inhalt))
+        df = pd.read_csv(io.BytesIO(inhalt))
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Datei konnte nicht gelesen werden: {exc}")
 
+    _spalten_validieren(df, case_col, activity_col, timestamp_col)
+    df[timestamp_col] = _zeitstempel_vereinheitlichen(df[timestamp_col], timestamp_col)
+    return df
 
-def _zeitstempel_vereinheitlichen(spalte: pd.Series) -> pd.Series:
+
+def _zeitstempel_vereinheitlichen(spalte: pd.Series, spaltenname: str) -> pd.Series:
     """Parst eine Zeitstempel-Spalte, die sowohl ISO- (YYYY-MM-DD) als auch
     deutsches Format (DD.MM.YYYY) enthalten kann, ohne die beiden Formate zu verwechseln."""
     spalte = spalte.astype(str).str.strip()
     ist_iso = spalte.str.match(r"^\d{4}-\d{2}-\d{2}")
 
     ergebnis = pd.Series(pd.NaT, index=spalte.index, dtype="datetime64[ns]")
-    ergebnis.loc[ist_iso] = pd.to_datetime(spalte[ist_iso], format="%Y-%m-%d %H:%M:%S")
-    ergebnis.loc[~ist_iso] = pd.to_datetime(spalte[~ist_iso], format="%d.%m.%Y %H:%M:%S")
+    try:
+        ergebnis.loc[ist_iso] = pd.to_datetime(spalte[ist_iso], format="%Y-%m-%d %H:%M:%S")
+        ergebnis.loc[~ist_iso] = pd.to_datetime(spalte[~ist_iso], format="%d.%m.%Y %H:%M:%S")
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Spalte '{spaltenname}' enthält keine gültigen Zeitstempel.",
+        )
     return ergebnis
+
+
+def _spalten_validieren(df: pd.DataFrame, case_col: str, activity_col: str, timestamp_col: str) -> None:
+    """Prüft, dass Case-ID-, Aktivitäts- und Zeitstempel-Spalte vorhanden sind und
+    Aktivität sowie Case-ID einen plausiblen Datentyp haben."""
+    fehlende_spalten = [col for col in [case_col, activity_col, timestamp_col] if col not in df.columns]
+    if fehlende_spalten:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Folgende Spalten wurden nicht in der Datei gefunden: {', '.join(fehlende_spalten)}",
+        )
+
+    if len({case_col, activity_col, timestamp_col}) < 3:
+        raise HTTPException(
+            status_code=400,
+            detail="Case-ID, Aktivität und Zeitstempel müssen auf drei unterschiedliche Spalten zeigen.",
+        )
+
+    if not pd.api.types.is_string_dtype(df[activity_col]) and not pd.api.types.is_object_dtype(df[activity_col]):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Spalte '{activity_col}' muss Text (Aktivitätsnamen) enthalten, enthält aber Datentyp {df[activity_col].dtype}.",
+        )
+
+    if pd.api.types.is_float_dtype(df[case_col]):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Spalte '{case_col}' muss eine Case-ID (Text oder Ganzzahl) enthalten, enthält aber Kommazahlen ({df[case_col].dtype}).",
+        )
 
 
 SENTINEL_DATUM = pd.Timestamp("1899-12-30")  # Excel-Nullwert für leere/fehlerhafte Zeitstempel
@@ -33,11 +72,6 @@ SENTINEL_DATUM = pd.Timestamp("1899-12-30")  # Excel-Nullwert für leere/fehlerh
 
 def durchlaufzeit_kpis(df: pd.DataFrame, case_col: str, activity_col: str, timestamp_col: str) -> dict:
     """Berechnet Durchlaufzeit-KPIs pro Case."""
-    for col in [case_col, activity_col, timestamp_col]:
-        if col not in df.columns:
-            raise HTTPException(status_code=400, detail=f"Spalte '{col}' nicht in der Datei gefunden.")
-
-    df[timestamp_col] = _zeitstempel_vereinheitlichen(df[timestamp_col])
     df = df[df[timestamp_col].dt.normalize() != SENTINEL_DATUM]
 
     case_durations = df.groupby(case_col)[timestamp_col].agg(["min", "max"])
@@ -63,7 +97,6 @@ def durchlaufzeit_kpis(df: pd.DataFrame, case_col: str, activity_col: str, times
 def engpassanalyse(df: pd.DataFrame, case_col: str, activity_col: str, timestamp_col: str) -> list[dict]:
     """Berechnet die durchschnittliche Verweildauer pro Aktivität (Activity-Level Bottlenecks)."""
     df = df.sort_values([case_col, timestamp_col]).copy()
-    df[timestamp_col] = pd.to_datetime(df[timestamp_col])
 
     df["_next_timestamp"] = df.groupby(case_col)[timestamp_col].shift(-1)
     df["_dauer_sekunden"] = (df["_next_timestamp"] - df[timestamp_col]).dt.total_seconds()
@@ -91,12 +124,6 @@ def engpassanalyse(df: pd.DataFrame, case_col: str, activity_col: str, timestamp
 
 def case_traces_fuer_llm(df: pd.DataFrame, case_col: str, activity_col: str, timestamp_col: str) -> list[dict]:
     """Aggregiert die Aktivitäten je Case in zeitlicher Reihenfolge, als Grundlage für die LLM-Verarbeitung."""
-    for col in [case_col, activity_col, timestamp_col]:
-        if col not in df.columns:
-            raise HTTPException(status_code=400, detail=f"Spalte '{col}' nicht in der Datei gefunden.")
-
-    df = df.copy()
-    df[timestamp_col] = _zeitstempel_vereinheitlichen(df[timestamp_col])
     df = df.sort_values([case_col, timestamp_col])
 
     traces = df.groupby(case_col)[activity_col].apply(lambda a: " -> ".join(a)).reset_index(name="trace")
