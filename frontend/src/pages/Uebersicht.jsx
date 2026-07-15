@@ -1,4 +1,7 @@
-import { useLocation, Navigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useLocation, Link } from "react-router-dom";
+
+const BACKEND_URL = "http://localhost:8000";
 
 function formatDauer(sekunden) {
   if (sekunden < 60) return `${sekunden.toFixed(1)} Sek.`;
@@ -9,10 +12,53 @@ function formatDauer(sekunden) {
 
 export default function Uebersicht() {
   const location = useLocation();
-  const { kpis, filename } = location.state || {};
+  const [kpis, setKpis] = useState(location.state?.kpis || null);
+  const [filename, setFilename] = useState(location.state?.filename || null);
+  const [loading, setLoading] = useState(!location.state?.kpis);
+
+  useEffect(() => {
+    if (kpis) return;
+    fetch(`${BACKEND_URL}/kpis`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.available) {
+          setKpis(data.kpis);
+          setFilename(data.filename);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div>
+        <h1 className="text-3xl font-semibold mb-2">Übersicht</h1>
+        <p className="text-gray-600">Daten werden geladen…</p>
+      </div>
+    );
+  }
 
   if (!kpis) {
-    return <Navigate to="/upload" replace />;
+    return (
+      <div>
+        <h1 className="text-3xl font-semibold mb-2">Übersicht</h1>
+        <div className="mt-6 max-w-xl bg-blue-50 border border-blue-200 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="material-symbols-outlined text-blue-500">info</span>
+            <span className="text-blue-800 font-medium">Keine Daten vorhanden</span>
+          </div>
+          <p className="text-blue-700 text-sm">
+            Um die Übersicht anzuzeigen, müssen Sie zuerst einen Event Log hochladen.
+          </p>
+          <Link
+            to="/upload"
+            className="inline-block mt-4 bg-primary text-white font-medium rounded-lg px-6 py-2 hover:bg-purple-700 transition-colors"
+          >
+            Zum Upload
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   const cards = [
