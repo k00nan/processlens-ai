@@ -78,7 +78,7 @@ export default function Uebersicht() {
     <div>
       <h1 className="text-3xl font-semibold mb-2">Übersicht</h1>
       <p className="text-gray-600 mb-8">
-        Kennzahlen für <span className="font-medium text-gray-900">{filename}</span>
+        Kennzahlen für <span className="font-medium text-gray-900">{filename}</span>.
       </p>
 
       <h2 className="text-lg font-semibold mb-4">Allgemein</h2>
