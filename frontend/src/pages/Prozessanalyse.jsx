@@ -126,6 +126,12 @@ export default function Prozessanalyse() {
           Ausreißergrenze dieser Aktivität überschreitet (Q3 + 1,5 × Interquartilsabstand,
           Tukey-Methode). Dieses Maß berücksichtigt die natürliche Streuung jeder Aktivität,
           statt einen festen Anteil an Instanzen zu markieren.
+          <br />
+          <br />
+          <strong>Annahme:</strong> Der Zeitstempel markiert im Event Log jeweils
+          den <strong>Abschluss</strong> einer Aktivität. Die Dauer einer Aktivität ergibt
+          sich daher aus der Zeit zwischen dem Abschluss der vorherigen und dem Abschluss der
+          jeweiligen Aktivität im selben Case.
         </span>
       </div>
 
