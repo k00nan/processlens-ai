@@ -43,6 +43,50 @@ export default function Uebersicht() {
   const [verteilung, setVerteilung] = useState(null);
   const [loading, setLoading] = useState(!location.state?.kpis);
 
+  const [zeitraumMin, setZeitraumMin] = useState(null);
+  const [zeitraumMax, setZeitraumMax] = useState(null);
+  const [filterVon, setFilterVon] = useState("");
+  const [filterBis, setFilterBis] = useState("");
+
+  function fetchData(von, bis) {
+    const params = new URLSearchParams();
+    if (von) params.set("von", von);
+    if (bis) params.set("bis", bis);
+    const qs = params.toString() ? `?${params}` : "";
+
+    fetch(`${BACKEND_URL}/kpis${qs}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.available) {
+          setKpis(data.kpis);
+          setFilename(data.filename);
+          if (data.verteilung) setVerteilung(data.verteilung);
+        }
+      })
+      .catch(() => {});
+
+    fetch(`${BACKEND_URL}/durchlaufzeit-verteilung${qs}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.available) setVerteilung(data.verteilung);
+      })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/zeitraum`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.available) {
+          setZeitraumMin(data.von);
+          setZeitraumMax(data.bis);
+          setFilterVon(data.von);
+          setFilterBis(data.bis);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (kpis) return;
     fetch(`${BACKEND_URL}/kpis`)
@@ -51,6 +95,7 @@ export default function Uebersicht() {
         if (data.available) {
           setKpis(data.kpis);
           setFilename(data.filename);
+          if (data.verteilung) setVerteilung(data.verteilung);
         }
       })
       .finally(() => setLoading(false));
@@ -64,6 +109,16 @@ export default function Uebersicht() {
       })
       .catch(() => {});
   }, []);
+
+  function handleFilterApply() {
+    fetchData(filterVon, filterBis);
+  }
+
+  function handleFilterReset() {
+    setFilterVon(zeitraumMin);
+    setFilterBis(zeitraumMax);
+    fetchData("", "");
+  }
 
   if (loading) {
     return (
@@ -113,9 +168,49 @@ export default function Uebersicht() {
   return (
     <div>
       <h1 className="text-3xl font-semibold mb-2">Übersicht</h1>
-      <p className="text-gray-600 mb-8">
+      <p className="text-gray-600 mb-6">
         Kennzahlen für <span className="font-medium text-gray-900">{filename}</span>.
       </p>
+
+      {zeitraumMin && (
+        <div className="flex items-center gap-4 mb-8 bg-white border border-gray-200 rounded-xl px-5 py-4">
+          <span className="material-symbols-outlined text-primary">date_range</span>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-500">Von</label>
+            <input
+              type="date"
+              value={filterVon}
+              min={zeitraumMin}
+              max={filterBis || zeitraumMax}
+              onChange={(e) => setFilterVon(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-500">Bis</label>
+            <input
+              type="date"
+              value={filterBis}
+              min={filterVon || zeitraumMin}
+              max={zeitraumMax}
+              onChange={(e) => setFilterBis(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+            />
+          </div>
+          <button
+            onClick={handleFilterApply}
+            className="bg-primary text-white text-sm font-medium rounded-lg px-4 py-1.5 hover:bg-purple-700 transition-colors"
+          >
+            Anwenden
+          </button>
+          <button
+            onClick={handleFilterReset}
+            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            Zurücksetzen
+          </button>
+        </div>
+      )}
 
       <h2 className="text-lg font-semibold mb-4">Allgemein</h2>
       <div className="grid grid-cols-3 gap-6 mb-10">

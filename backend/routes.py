@@ -1,6 +1,9 @@
-from fastapi import APIRouter, File, Form, UploadFile
+from typing import Optional
 
-from Datenvorverarbeitung import datei_einlesen, durchlaufzeit_kpis, durchlaufzeit_verteilung, engpassanalyse, case_traces_fuer_llm
+import pandas as pd
+from fastapi import APIRouter, File, Form, Query, UploadFile
+
+from Datenvorverarbeitung import datei_einlesen, durchlaufzeit_kpis, durchlaufzeit_verteilung, engpassanalyse, case_traces_fuer_llm, SENTINEL_DATUM
 from bpmn_generator import prozessvarianten, bpmn_fuer_variante_generieren
 
 router = APIRouter()
@@ -18,7 +21,7 @@ async def upload(
     activity: str = Form(...),
     timestamp: str = Form(...),
 ):
-    global _last_result
+    global _last_result, _last_df, _last_columns, _varianten
     df = await datei_einlesen(file, case_id, activity, timestamp)
     kpis = durchlaufzeit_kpis(df, case_id, activity, timestamp)
     engpaesse = engpassanalyse(df, case_id, activity, timestamp)
@@ -36,17 +39,53 @@ async def upload(
     }
 
 
+def _filter_df(von: Optional[str], bis: Optional[str]) -> pd.DataFrame:
+    """Filtert den gespeicherten DataFrame nach Zeitraum (ohne 1899-Sentinel-Daten)."""
+    df = _last_df.copy()
+    ts_col = _last_columns["timestamp"]
+    df = df[df[ts_col].dt.normalize() != SENTINEL_DATUM]
+    if von:
+        df = df[df[ts_col] >= pd.Timestamp(von)]
+    if bis:
+        df = df[df[ts_col] <= pd.Timestamp(bis) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)]
+    return df
+
+
+@router.get("/zeitraum")
+async def get_zeitraum():
+    if _last_df is None or _last_columns is None:
+        return {"available": False}
+    ts_col = _last_columns["timestamp"]
+    df = _last_df[_last_df[ts_col].dt.normalize() != SENTINEL_DATUM]
+    return {
+        "available": True,
+        "von": str(df[ts_col].min().date()),
+        "bis": str(df[ts_col].max().date()),
+    }
+
+
 @router.get("/kpis")
-async def get_kpis():
+async def get_kpis(von: Optional[str] = Query(None), bis: Optional[str] = Query(None)):
     if _last_result is None:
         return {"available": False}
+    if von or bis:
+        df = _filter_df(von, bis)
+        cols = _last_columns
+        kpis = durchlaufzeit_kpis(df, cols["case_id"], cols["activity"], cols["timestamp"])
+        verteilung = durchlaufzeit_verteilung(df, cols["case_id"], cols["timestamp"])
+        return {"available": True, "filename": _last_result["filename"], "kpis": kpis, "verteilung": verteilung}
     return {"available": True, **_last_result}
 
 
 @router.get("/durchlaufzeit-verteilung")
-async def get_verteilung():
+async def get_verteilung(von: Optional[str] = Query(None), bis: Optional[str] = Query(None)):
     if _last_result is None or "verteilung" not in _last_result:
         return {"available": False}
+    if von or bis:
+        df = _filter_df(von, bis)
+        cols = _last_columns
+        verteilung = durchlaufzeit_verteilung(df, cols["case_id"], cols["timestamp"])
+        return {"available": True, "verteilung": verteilung}
     return {"available": True, "verteilung": _last_result["verteilung"]}
 
 
