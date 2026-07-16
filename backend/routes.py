@@ -2,6 +2,7 @@ from fastapi import APIRouter, File, Form, UploadFile
 
 from Datenvorverarbeitung import datei_einlesen, durchlaufzeit_kpis, engpassanalyse, case_traces_fuer_llm
 from bpmn_generator import prozessvarianten, bpmn_fuer_variante_generieren
+from chat_generator import frage_beantworten
 
 router = APIRouter()
 
@@ -18,7 +19,7 @@ async def upload(
     activity: str = Form(...),
     timestamp: str = Form(...),
 ):
-    global _last_result
+    global _last_result, _last_df, _last_columns, _varianten
     df = await datei_einlesen(file, case_id, activity, timestamp)
     kpis = durchlaufzeit_kpis(df, case_id, activity, timestamp)
     engpaesse = engpassanalyse(df, case_id, activity, timestamp)
@@ -75,3 +76,20 @@ async def generate_bpmn(request: dict):
     except Exception as e:
         return {"available": False, "error": str(e)}
     return {"available": True, "bpmn_xml": bpmn_xml}
+
+
+@router.post("/chat")
+async def chat(request: dict):
+    if _last_result is None:
+        return {"available": False, "error": "Bitte zuerst einen Event Log hochladen."}
+
+    frage = request.get("frage")
+    if not frage:
+        return {"available": False, "error": "Keine Frage angegeben."}
+
+    verlauf = request.get("verlauf", [])
+    try:
+        antwort = frage_beantworten(frage, verlauf, _last_result["kpis"], _last_result["engpaesse"])
+    except Exception as e:
+        return {"available": False, "error": str(e)}
+    return {"available": True, "antwort": antwort}

@@ -213,23 +213,19 @@ def test_engpassanalyse_berechnet_verweildauer_je_aktivitaet():
 
     result = engpassanalyse(df, "case_id", "activity", "timestamp")
 
-    assert [row["aktivitaet"] for row in result] == ["Middle", "Start"]
+    assert [row["aktivitaet"] for row in result] == ["End", "Middle"]
 
-    # Middle-Dauern: [1800, 3600], eigener Median 2700, Schwelle 3240 -> nur 3600 ist Bottleneck
-    middle, start = result
-    assert middle["durchschnitt_sekunden"] == 2700.0
-    assert middle["median_sekunden"] == 2700.0
-    assert middle["maximum_sekunden"] == 3600.0
-    assert middle["anzahl_bottlenecks"] == 1
-    assert middle["anteil_cases_prozent"] == 50.0
+    # End-Dauern (Zeit bis zum Abschluss von End): [1800, 3600]
+    end, middle = result
+    assert end["durchschnitt_sekunden"] == 2700.0
+    assert end["median_sekunden"] == 2700.0
+    assert end["maximum_sekunden"] == 3600.0
 
-    # Start-Dauern: [600, 300], eigener Median 450, Schwelle 540 -> nur 600 ist Bottleneck
-    assert start["durchschnitt_sekunden"] == 450.0
-    assert start["anzahl_bottlenecks"] == 1
-    assert start["anteil_cases_prozent"] == 50.0
+    # Middle-Dauern (Zeit bis zum Abschluss von Middle): [600, 300]
+    assert middle["durchschnitt_sekunden"] == 450.0
 
 
-def test_engpassanalyse_letzte_aktivitaet_je_case_hat_keine_verweildauer():
+def test_engpassanalyse_erste_aktivitaet_je_case_hat_keine_verweildauer():
     df = pd.DataFrame({
         "case_id": ["1", "1"],
         "activity": ["Start", "End"],
@@ -238,26 +234,28 @@ def test_engpassanalyse_letzte_aktivitaet_je_case_hat_keine_verweildauer():
 
     result = engpassanalyse(df, "case_id", "activity", "timestamp")
 
-    assert [row["aktivitaet"] for row in result] == ["Start"]
+    assert [row["aktivitaet"] for row in result] == ["End"]
 
 
-def test_engpassanalyse_markiert_bottleneck_instanzen_ueber_20_prozent_vom_eigenen_median():
-    df = pd.DataFrame({
-        "case_id": ["1", "1", "2", "2", "3", "3", "4", "4"],
-        "activity": ["X", "End", "X", "End", "X", "End", "X", "End"],
-        "timestamp": pd.to_datetime([
-            "2020-01-01 00:00:00", "2020-01-01 00:01:40",  # +100s
-            "2020-01-02 00:00:00", "2020-01-02 00:01:40",  # +100s
-            "2020-01-03 00:00:00", "2020-01-03 00:01:40",  # +100s
-            "2020-01-04 00:00:00", "2020-01-04 00:05:00",  # +300s
-        ]),
-    })
+def test_engpassanalyse_markiert_bottleneck_instanzen_ueber_iqr_grenze():
+    dauern = [100, 100, 100, 100, 100, 100, 100, 500]
+    basis = pd.Timestamp("2020-01-01")
+
+    case_ids, aktivitaeten, zeitstempel = [], [], []
+    for i, dauer in enumerate(dauern):
+        case_id = str(i + 1)
+        start_zeit = basis + pd.Timedelta(days=i)
+        case_ids += [case_id, case_id]
+        aktivitaeten += ["Start", "X"]
+        zeitstempel += [start_zeit, start_zeit + pd.Timedelta(seconds=dauer)]
+
+    df = pd.DataFrame({"case_id": case_ids, "activity": aktivitaeten, "timestamp": zeitstempel})
 
     result = engpassanalyse(df, "case_id", "activity", "timestamp")
     x = next(row for row in result if row["aktivitaet"] == "X")
 
-    # X-Dauern: [100, 100, 100, 300], eigener Median 100, Schwelle 120 -> nur 300 ist Bottleneck
-    assert x["median_sekunden"] == 100.0
+    # X-Dauern: 7x100s (eng beieinander, IQR=0) + 1x500s -> nur die 500s liegt über
+    # der Tukey-Grenze (Q3 + 1,5*IQR = 100 + 0 = 100) dieser Aktivität
     assert x["anzahl_bottlenecks"] == 1
-    assert x["anteil_cases_prozent"] == 25.0  # 1 von 4 Cases insgesamt
+    assert x["anteil_cases_prozent"] == 12.5  # 1 von 8 Cases insgesamt
     assert x["ist_engpass"] is True

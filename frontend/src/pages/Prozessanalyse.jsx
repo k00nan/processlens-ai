@@ -103,7 +103,10 @@ export default function Prozessanalyse() {
                 {e.anteil_cases_prozent.toFixed(1)}%
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                der Cases betroffen · {e.anzahl_bottlenecks.toLocaleString("de-DE")} Bottleneck-Instanzen
+                {e.cases_mit_bottleneck.toLocaleString("de-DE")} von {e.gesamt_anzahl_cases.toLocaleString("de-DE")} Cases betroffen
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {e.anzahl_bottlenecks.toLocaleString("de-DE")} Bottleneck-Instanzen insgesamt
               </p>
             </div>
           );
@@ -119,8 +122,10 @@ export default function Prozessanalyse() {
         <span className="material-symbols-outlined text-blue-500">info</span>
         <span>
           <strong>Wie wird ein Bottleneck berechnet?</strong> Ein einzelner Durchlauf einer
-          Aktivität (in einem konkreten Case) gilt als Bottleneck, wenn seine Dauer mehr als 20%
-          über dem Median genau dieser Aktivität liegt.
+          Aktivität (in einem konkreten Case) gilt als Bottleneck, wenn seine Dauer die
+          Ausreißergrenze dieser Aktivität überschreitet (Q3 + 1,5 × Interquartilsabstand,
+          Tukey-Methode). Dieses Maß berücksichtigt die natürliche Streuung jeder Aktivität,
+          statt einen festen Anteil an Instanzen zu markieren.
         </span>
       </div>
 
@@ -132,8 +137,18 @@ export default function Prozessanalyse() {
               <th className="text-left px-6 py-3 font-medium text-gray-700">Ø Dauer</th>
               <th className="text-left px-6 py-3 font-medium text-gray-700">Median</th>
               <th className="text-left px-6 py-3 font-medium text-gray-700">Maximum</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-700">Anzahl Bottlenecks</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-700">Anteil an Cases</th>
+              <th
+                className="text-left px-6 py-3 font-medium text-gray-700"
+                title="Anzahl der Instanzen dieser Aktivität, deren Dauer über der Ausreißergrenze (Q3 + 1,5 × IQR) liegt"
+              >
+                Anzahl Bottlenecks
+              </th>
+              <th
+                className="text-left px-6 py-3 font-medium text-gray-700"
+                title="Anteil aller Cases im Event Log, in denen diese Aktivität mindestens einmal zum Bottleneck wurde"
+              >
+                Anteil an Cases
+              </th>
               <th className="text-left px-6 py-3 font-medium text-gray-700 w-48"></th>
             </tr>
           </thead>
@@ -163,6 +178,9 @@ export default function Prozessanalyse() {
                   <td className="px-6 py-3 text-gray-700">{e.anzahl_bottlenecks.toLocaleString("de-DE")}</td>
                   <td className={`px-6 py-3 font-medium ${schwere.textFarbe}`}>
                     {e.anteil_cases_prozent.toFixed(1)}%
+                    <span className="block text-xs font-normal text-gray-400">
+                      {e.cases_mit_bottleneck.toLocaleString("de-DE")} von {e.gesamt_anzahl_cases.toLocaleString("de-DE")} Cases
+                    </span>
                   </td>
                   <td className="px-6 py-3">
                     <div className="w-full bg-gray-200 rounded-full h-2">
