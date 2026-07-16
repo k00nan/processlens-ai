@@ -12,6 +12,8 @@ const VORSCHLAEGE = [
   "Wie lange dauert der Prozess im Durchschnitt bis zum Abschluss?",
   "Welche drei Verbesserungsmaßnahmen würdest du empfehlen?",
   "Gibt es Aktivitäten, die auffällig oft zu Engpässen führen?",
+  "Welche Schlüsse lassen sich aus den häufigsten Prozessvarianten schließen?",
+  "Wie stark unterscheiden sich die häufigsten Prozessvarianten voneinander?",
 ];
 
 function formatiereInlineText(text) {
@@ -542,8 +544,10 @@ export default function KiAuswertung() {
           <span className="material-symbols-outlined mt-0.5 text-blue-500 text-lg">info</span>
           <p>
             {activeTab === "prozessmodell"
-              ? "Bei der Generierung der Prozessgraphen wird KI verwendet."
-              : "Die Antworten im Chat werden KI-generiert."}
+              ? "Die Prozessgraphen werden mit KI generiert."
+              : activeTab === "abweichungsanalyse"
+              ? "Die Abweichungsanalyse wird mit KI generiert."
+              : "Die Antworten im Chat werden mit KI generiert."}
           </p>
         </div>
       </div>
@@ -604,7 +608,7 @@ export default function KiAuswertung() {
                       <th className="text-left px-6 py-3 font-medium text-gray-700">Variante</th>
                       <th className="text-left px-6 py-3 font-medium text-gray-700 w-28">Anzahl</th>
                       <th className="text-left px-6 py-3 font-medium text-gray-700 w-40">Anteil</th>
-                      <th className="text-left px-6 py-3 font-medium text-gray-700 w-32">Aktion</th>
+                      <th className="text-left px-6 py-3 font-medium text-gray-700 w-32">Prozessmodell</th>
                     </tr>
                   </thead>
                   <tbody>
