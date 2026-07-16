@@ -236,6 +236,17 @@ export default function KiAuswertung() {
         Generiert automatisch ein BPMN 2.0 Prozessmodell für einzelne Prozessvarianten mittels Gemini.
       </p>
 
+      <div className="mb-6 max-w-2xl rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 shadow-sm">
+        <div className="flex items-start gap-3">
+          <span className="material-symbols-outlined mt-0.5 text-blue-500 text-lg">info</span>
+          <p>
+            {activeTab === "prozessmodell"
+              ? "Bei der Generierung der Prozessgraphen wird KI verwendet."
+              : "Die Antworten im Chat werden KI-generiert."}
+          </p>
+        </div>
+      </div>
+
       <div className="border-b border-gray-200 flex gap-6">
         {tabs.map((tab) => (
           <button
