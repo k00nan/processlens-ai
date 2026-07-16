@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 const navItems = [
   { path: "/upload", label: "Upload", icon: "cloud_upload" },
   { path: "/uebersicht", label: "Übersicht", icon: "home" },
-  { path: "/prozessanalyse", label: "Prozessanalyse", icon: "show_chart" },
+  { path: "/engpassanalyse", label: "Engpassanalyse", icon: "show_chart" },
   { path: "/ki-auswertung", label: "KI-Auswertung", icon: "chat" },
 ];
 

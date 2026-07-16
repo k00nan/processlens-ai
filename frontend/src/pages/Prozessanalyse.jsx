@@ -45,7 +45,7 @@ export default function Prozessanalyse() {
   if (loading) {
     return (
       <div>
-        <h1 className="text-3xl font-semibold mb-2">Prozessanalyse</h1>
+        <h1 className="text-3xl font-semibold mb-2">Engpassanalyse</h1>
         <p className="text-gray-600">Daten werden geladen…</p>
       </div>
     );
@@ -54,14 +54,14 @@ export default function Prozessanalyse() {
   if (!engpaesse) {
     return (
       <div>
-        <h1 className="text-3xl font-semibold mb-2">Prozessanalyse</h1>
+        <h1 className="text-3xl font-semibold mb-2">Engpassanalyse</h1>
         <div className="mt-6 max-w-xl bg-blue-50 border border-blue-200 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-2">
             <span className="material-symbols-outlined text-blue-500">info</span>
             <span className="text-blue-800 font-medium">Keine Daten vorhanden</span>
           </div>
           <p className="text-blue-700 text-sm">
-            Um die Prozessanalyse anzuzeigen, müssen Sie zuerst einen Event Log hochladen.
+            Um die Engpassanalyse anzuzeigen, müssen Sie zuerst einen Event Log hochladen.
           </p>
           <Link
             to="/upload"
@@ -81,10 +81,7 @@ export default function Prozessanalyse() {
 
   return (
     <div>
-      <h1 className="text-3xl font-semibold mb-2">Prozessanalyse</h1>
-      <p className="text-gray-600 mb-8">
-        Analyse der Prozessschritte und Engpässe.
-      </p>
+      <h1 className="text-3xl font-semibold mb-8">Engpassanalyse</h1>
 
       <h2 className="text-lg font-semibold mb-4">Größte Engpässe</h2>
       <div className="grid grid-cols-3 gap-6 mb-10">
@@ -114,25 +111,30 @@ export default function Prozessanalyse() {
       </div>
 
       <h2 className="text-lg font-semibold mb-4">Engpässe (Aktivitätsebene)</h2>
-      <p className="text-gray-500 text-sm mb-4">
-        Verweildauer pro Aktivität, sortiert nach Anteil an Cases mit Bottleneck.
-      </p>
 
-      <div className="mb-4 max-w-3xl flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-800">
-        <span className="material-symbols-outlined text-blue-500">info</span>
-        <span>
-          <strong>Wie wird ein Bottleneck berechnet?</strong> Ein einzelner Durchlauf einer
-          Aktivität (in einem konkreten Case) gilt als Bottleneck, wenn seine Dauer die
-          Ausreißergrenze dieser Aktivität überschreitet (Q3 + 1,5 × Interquartilsabstand,
-          Tukey-Methode). Dieses Maß berücksichtigt die natürliche Streuung jeder Aktivität,
-          statt einen festen Anteil an Instanzen zu markieren.
-          <br />
-          <br />
-          <strong>Annahme:</strong> Der Zeitstempel markiert im Event Log jeweils
-          den <strong>Abschluss</strong> einer Aktivität. Die Dauer einer Aktivität ergibt
-          sich daher aus der Zeit zwischen dem Abschluss der vorherigen und dem Abschluss der
-          jeweiligen Aktivität im selben Case.
-        </span>
+      <div className="mb-4 max-w-5xl bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-start gap-2 text-sm text-blue-800">
+            <span className="material-symbols-outlined text-blue-500">info</span>
+            <span>
+              <strong>Wie wird ein Bottleneck berechnet?</strong> Ein einzelner Durchlauf einer
+              Aktivität (in einem konkreten Case) gilt als Bottleneck, wenn seine Dauer die
+              Ausreißergrenze dieser Aktivität überschreitet (Q3 + 1,5 × Interquartilsabstand,
+              Tukey-Methode). Dieses Maß berücksichtigt die natürliche Streuung jeder Aktivität,
+              statt einen festen Anteil an Instanzen zu markieren.
+            </span>
+          </div>
+          <div className="flex items-start gap-2 text-sm text-blue-800">
+            <span className="material-symbols-outlined text-blue-500">info</span>
+            <span>
+              <strong>Annahme:</strong> Der Zeitstempel markiert im Event Log jeweils
+              den <strong>Abschluss</strong> einer Aktivität. Die Dauer einer Aktivität ergibt
+              sich daher aus der Zeit zwischen dem Abschluss der vorherigen und dem Abschluss der
+              jeweiligen Aktivität im selben Case. Dadurch können auch Ruhezeiten (z.B. Nächte,
+              Wochenenden oder sonstige Wartezeiten) in dieser Dauer enthalten sein.
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">

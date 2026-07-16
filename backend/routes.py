@@ -6,6 +6,7 @@ from fastapi import APIRouter, File, Form, Query, UploadFile
 from Datenvorverarbeitung import datei_einlesen, durchlaufzeit_kpis, durchlaufzeit_verteilung, engpassanalyse, case_traces_fuer_llm, SENTINEL_DATUM
 from bpmn_generator import prozessvarianten, bpmn_fuer_variante_generieren
 from chat_generator import frage_beantworten
+from abweichungsanalyse import soll_ist_abweichung_analysieren
 
 router = APIRouter()
 
@@ -97,11 +98,10 @@ async def get_engpaesse():
     return {"available": True, "engpaesse": _last_result["engpaesse"]}
 
 
-@router.get("/varianten")
-async def get_varianten():
+def _aktuelle_varianten() -> list[dict] | None:
     global _varianten
     if _last_df is None or _last_columns is None:
-        return {"available": False}
+        return None
     if _varianten is None:
         traces = case_traces_fuer_llm(
             _last_df,
@@ -110,7 +110,46 @@ async def get_varianten():
             _last_columns["timestamp"],
         )
         _varianten = prozessvarianten(traces)
-    return {"available": True, "varianten": _varianten}
+    return _varianten
+
+
+@router.get("/varianten")
+async def get_varianten():
+    varianten = _aktuelle_varianten()
+    if varianten is None:
+        return {"available": False}
+    return {"available": True, "varianten": varianten}
+
+
+@router.post("/abweichungsanalyse")
+async def abweichungsanalyse(file: Optional[UploadFile] = File(None)):
+    varianten = _aktuelle_varianten()
+    if varianten is None:
+        return {"available": False, "error": "Bitte zuerst einen Event Log hochladen."}
+
+    if file is not None and file.filename:
+        if not file.filename.lower().endswith(".bpmn"):
+            return {"available": False, "error": "Nur .bpmn-Dateien werden unterstützt."}
+        soll_bpmn_xml = (await file.read()).decode("utf-8")
+        vergleichs_varianten = varianten
+    else:
+        soll_bpmn_xml = None
+        vergleichs_varianten = varianten[1:]
+
+    try:
+        ergebnis = soll_ist_abweichung_analysieren(
+            vergleichs_varianten,
+            soll_bpmn_xml=soll_bpmn_xml,
+            soll_trace=None if soll_bpmn_xml else varianten[0]["trace"],
+        )
+    except Exception as e:
+        return {"available": False, "error": str(e)}
+    return {
+        "available": True,
+        "abweichungen": ergebnis.get("abweichungen", []),
+        "zusammenfassung": ergebnis.get("zusammenfassung", ""),
+        "varianten": vergleichs_varianten,
+    }
 
 
 @router.post("/bpmn")
