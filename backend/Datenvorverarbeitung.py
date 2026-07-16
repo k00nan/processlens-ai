@@ -175,10 +175,7 @@ def engpassanalyse(df: pd.DataFrame, case_col: str, activity_col: str, timestamp
     vorherigen) Aktivität zugeordnet, da sie die Zeit widerspiegelt, die für deren
     Fertigstellung benötigt wurde."""
     df = df.sort_values([case_col, timestamp_col]).copy()
-<<<<<<< backend/Datenvorverarbeitung.py
     df[timestamp_col] = _zeitstempel_vereinheitlichen(df[timestamp_col], timestamp_col)
-=======
->>>>>>> backend/Datenvorverarbeitung.py
     df = df[df[timestamp_col].dt.normalize() != SENTINEL_DATUM]
 
     df["_vorheriger_timestamp"] = df.groupby(case_col)[timestamp_col].shift(1)
