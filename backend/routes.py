@@ -4,7 +4,7 @@ import pandas as pd
 from fastapi import APIRouter, File, Form, Query, UploadFile
 
 from Datenvorverarbeitung import datei_einlesen, durchlaufzeit_kpis, durchlaufzeit_verteilung, engpassanalyse, case_traces_fuer_llm, SENTINEL_DATUM
-from bpmn_generator import prozessvarianten, bpmn_fuer_variante_generieren
+from bpmn_generator import prozessvarianten, gesamt_anzahl_varianten, bpmn_fuer_variante_generieren
 from chat_generator import frage_beantworten
 from abweichungsanalyse import soll_ist_abweichung_analysieren
 
@@ -14,6 +14,7 @@ _last_result: dict | None = None
 _last_df = None
 _last_columns: dict | None = None
 _varianten: list[dict] | None = None
+_gesamt_anzahl_varianten: int | None = None
 
 
 @router.post("/upload")
@@ -23,7 +24,7 @@ async def upload(
     activity: str = Form(...),
     timestamp: str = Form(...),
 ):
-    global _last_result, _last_df, _last_columns, _varianten
+    global _last_result, _last_df, _last_columns, _varianten, _gesamt_anzahl_varianten
     df = await datei_einlesen(file, case_id, activity, timestamp)
     kpis = durchlaufzeit_kpis(df, case_id, activity, timestamp)
     engpaesse = engpassanalyse(df, case_id, activity, timestamp)
@@ -32,6 +33,7 @@ async def upload(
     _last_df = df
     _last_columns = {"case_id": case_id, "activity": activity, "timestamp": timestamp}
     _varianten = None
+    _gesamt_anzahl_varianten = None
     return {
         "filename": file.filename,
         "rows": len(df),
@@ -99,7 +101,7 @@ async def get_engpaesse():
 
 
 def _aktuelle_varianten() -> list[dict] | None:
-    global _varianten
+    global _varianten, _gesamt_anzahl_varianten
     if _last_df is None or _last_columns is None:
         return None
     if _varianten is None:
@@ -110,6 +112,7 @@ def _aktuelle_varianten() -> list[dict] | None:
             _last_columns["timestamp"],
         )
         _varianten = prozessvarianten(traces)
+        _gesamt_anzahl_varianten = gesamt_anzahl_varianten(traces)
     return _varianten
 
 
@@ -118,7 +121,11 @@ async def get_varianten():
     varianten = _aktuelle_varianten()
     if varianten is None:
         return {"available": False}
-    return {"available": True, "varianten": varianten}
+    return {
+        "available": True,
+        "varianten": varianten,
+        "gesamt_anzahl_varianten": _gesamt_anzahl_varianten,
+    }
 
 
 @router.post("/abweichungsanalyse")

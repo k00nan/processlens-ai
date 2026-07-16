@@ -197,13 +197,13 @@ function ChatTab({ datenVorhanden, messages, setMessages }) {
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.rolle === "user" ? "justify-end" : "justify-start"}`}>
               <div
-                className={`max-w-[75%] px-4 py-2 rounded-lg text-sm whitespace-pre-wrap ${
+                className={`max-w-[80%] px-4 py-2 rounded-lg text-sm ${
                   m.rolle === "user"
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-white whitespace-pre-wrap"
                     : "bg-gray-100 text-gray-900"
                 }`}
               >
-                {m.text}
+                {m.rolle === "user" ? m.text : renderAnalyseText(m.text)}
               </div>
             </div>
           ))}
@@ -452,6 +452,7 @@ export default function KiAuswertung() {
   const {
     activeTab, setActiveTab,
     varianten, setVarianten,
+    gesamtAnzahlVarianten, setGesamtAnzahlVarianten,
     bpmnCache, setBpmnCache,
     activeIdx, setActiveIdx,
     generationCount, setGenerationCount,
@@ -471,22 +472,24 @@ export default function KiAuswertung() {
     fetch(`${BACKEND_URL}/varianten`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.available) setVarianten(data.varianten);
+        if (data.available) {
+          setVarianten(data.varianten);
+          setGesamtAnzahlVarianten(data.gesamt_anzahl_varianten);
+        }
       })
       .catch(() => {});
-    return () => { if (viewerRef.current) viewerRef.current.destroy(); };
   }, []);
 
   useEffect(() => {
     const xml = bpmnCache[activeIdx];
     if (!xml || !containerRef.current) return;
 
-    if (viewerRef.current) viewerRef.current.destroy();
-
+    let abgebrochen = false;
     const viewer = new BpmnViewer({ container: containerRef.current });
     viewerRef.current = viewer;
 
     viewer.importXML(xml).then(({ warnings }) => {
+      if (abgebrochen) return;
       if (warnings.length) console.warn("BPMN warnings:", warnings);
       const canvas = viewer.get("canvas");
       canvas.zoom("fit-viewport");
@@ -496,8 +499,14 @@ export default function KiAuswertung() {
       canvas.zoom("fit-viewport");
       canvas.zoom(canvas.zoom() * 0.85);
     }).catch((err) => {
+      if (abgebrochen) return;
       setError("BPMN-Rendering fehlgeschlagen: " + err.message);
     });
+
+    return () => {
+      abgebrochen = true;
+      viewer.destroy();
+    };
   }, [activeIdx, bpmnCache]);
 
   async function generateForIndex(idx, trace) {
@@ -576,6 +585,29 @@ export default function KiAuswertung() {
             </div>
           )}
 
+          {varianten && (
+            <div className="grid grid-cols-2 gap-6 mt-4">
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="material-symbols-outlined text-primary">account_tree</span>
+                  <span className="text-sm text-gray-500">Varianten insgesamt</span>
+                </div>
+                <p className="text-3xl font-bold text-gray-900">
+                  {gesamtAnzahlVarianten != null ? gesamtAnzahlVarianten.toLocaleString("de-DE") : "–"}
+                </p>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="material-symbols-outlined text-primary">pie_chart</span>
+                  <span className="text-sm text-gray-500">Abdeckung Top 10 (Anteil an Cases)</span>
+                </div>
+                <p className="text-3xl font-bold text-gray-900">
+                  {varianten.reduce((summe, v) => summe + v.anteil, 0).toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          )}
+
           {bpmnCache[activeIdx] && (
             <div className="mt-6">
               <h2 className="text-xl font-medium mb-3">BPMN 2.0 Prozessmodell — Variante {activeIdx + 1}</h2>
@@ -607,7 +639,12 @@ export default function KiAuswertung() {
                       <th className="text-left px-6 py-3 font-medium text-gray-700 w-12">#</th>
                       <th className="text-left px-6 py-3 font-medium text-gray-700">Variante</th>
                       <th className="text-left px-6 py-3 font-medium text-gray-700 w-28">Anzahl</th>
-                      <th className="text-left px-6 py-3 font-medium text-gray-700 w-40">Anteil</th>
+                      <th
+                        className="text-left px-6 py-3 font-medium text-gray-700 w-40"
+                        title="Anteil dieser Variante an allen Cases im Event Log"
+                      >
+                        Anteil
+                      </th>
                       <th className="text-left px-6 py-3 font-medium text-gray-700 w-32">Prozessmodell</th>
                     </tr>
                   </thead>
