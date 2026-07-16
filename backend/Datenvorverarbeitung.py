@@ -93,7 +93,6 @@ def durchlaufzeit_kpis(df: pd.DataFrame, case_col: str, activity_col: str, times
         "durchlaufzeit_median_sekunden": float(durations_seconds.median()),
     }
 
-
 def _dauer_label(sekunden: float) -> str:
     """Formatiert eine Dauer in Sekunden zu einem lesbaren Label."""
     if sekunden < 3600:
@@ -163,24 +162,39 @@ def durchlaufzeit_verteilung(df: pd.DataFrame, case_col: str, timestamp_col: str
         "durchschnitt_sekunden": float(np.mean(durations)),
     }
 
+ENGPASS_SCHWELLENWERT = 1.2  # 20% über dem Median der jeweiligen Aktivität gilt als Bottleneck-Instanz
 
 def engpassanalyse(df: pd.DataFrame, case_col: str, activity_col: str, timestamp_col: str) -> list[dict]:
-    """Berechnet die durchschnittliche Verweildauer pro Aktivität (Activity-Level Bottlenecks)."""
+    """Berechnet je Aktivität die Verweildauer-Statistik sowie Bottlenecks: Eine einzelne
+    Aktivitäts-Instanz (in einem Case) gilt als Bottleneck, wenn ihre Dauer mehr als 20%
+    über dem Median genau dieser Aktivität liegt."""
     df = df.sort_values([case_col, timestamp_col]).copy()
+<<<<<<< backend/Datenvorverarbeitung.py
     df[timestamp_col] = _zeitstempel_vereinheitlichen(df[timestamp_col], timestamp_col)
+=======
+>>>>>>> backend/Datenvorverarbeitung.py
     df = df[df[timestamp_col].dt.normalize() != SENTINEL_DATUM]
 
     df["_next_timestamp"] = df.groupby(case_col)[timestamp_col].shift(-1)
     df["_dauer_sekunden"] = (df["_next_timestamp"] - df[timestamp_col]).dt.total_seconds()
 
-    stats = (
-        df.dropna(subset=["_dauer_sekunden"])
-        .groupby(activity_col)["_dauer_sekunden"]
-        .agg(["mean", "median", "max", "count"])
-        .rename(columns={"mean": "durchschnitt", "median": "median", "max": "maximum", "count": "anzahl"})
-        .sort_values("durchschnitt", ascending=False)
-        .reset_index()
+    gueltig = df.dropna(subset=["_dauer_sekunden"]).copy()
+
+    aktivitaet_median = gueltig.groupby(activity_col)["_dauer_sekunden"].transform("median")
+    gueltig["_ist_bottleneck"] = gueltig["_dauer_sekunden"] > aktivitaet_median * ENGPASS_SCHWELLENWERT
+
+    stats = gueltig.groupby(activity_col)["_dauer_sekunden"].agg(
+        durchschnitt="mean", median="median", maximum="max",
     )
+    stats["anzahl_bottlenecks"] = gueltig[gueltig["_ist_bottleneck"]].groupby(activity_col).size()
+    stats["cases_mit_bottleneck"] = (
+        gueltig[gueltig["_ist_bottleneck"]].groupby(activity_col)[case_col].nunique()
+    )
+    stats = stats.fillna(0)
+
+    gesamt_anzahl_cases = df[case_col].nunique()
+    stats["anteil_cases_prozent"] = (stats["cases_mit_bottleneck"] / gesamt_anzahl_cases * 100).round(1)
+    stats = stats.sort_values("durchschnitt", ascending=False).reset_index()
 
     return [
         {
@@ -188,7 +202,9 @@ def engpassanalyse(df: pd.DataFrame, case_col: str, activity_col: str, timestamp
             "durchschnitt_sekunden": float(row["durchschnitt"]),
             "median_sekunden": float(row["median"]),
             "maximum_sekunden": float(row["maximum"]),
-            "anzahl": int(row["anzahl"]),
+            "anzahl_bottlenecks": int(row["anzahl_bottlenecks"]),
+            "anteil_cases_prozent": float(row["anteil_cases_prozent"]),
+            "ist_engpass": bool(row["anzahl_bottlenecks"] > 0),
         }
         for _, row in stats.iterrows()
     ]

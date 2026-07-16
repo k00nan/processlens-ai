@@ -10,6 +10,23 @@ function formatDauer(sekunden) {
   return `${(sekunden / 86400).toFixed(1)} Tage`;
 }
 
+function formatSekundenGenau(sekunden) {
+  return `${sekunden.toLocaleString("de-DE", { maximumFractionDigits: 1 })} Sekunden`;
+}
+
+function engpassSchwere(anteilProzent) {
+  if (anteilProzent >= 40) {
+    return { farbe: "#dc2626", label: "Kritisch", textFarbe: "text-red-700", badgeBg: "bg-red-100" };
+  }
+  if (anteilProzent >= 25) {
+    return { farbe: "#f97316", label: "Hoch", textFarbe: "text-orange-700", badgeBg: "bg-orange-100" };
+  }
+  if (anteilProzent >= 10) {
+    return { farbe: "#f59e0b", label: "Mittel", textFarbe: "text-amber-700", badgeBg: "bg-amber-100" };
+  }
+  return { farbe: "#7c3aed", label: "Gering", textFarbe: "text-purple-700", badgeBg: "bg-purple-100" };
+}
+
 export default function Prozessanalyse() {
   const [engpaesse, setEngpaesse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -57,7 +74,10 @@ export default function Prozessanalyse() {
     );
   }
 
-  const maxDurchschnitt = engpaesse[0]?.durchschnitt_sekunden || 1;
+  const sortierteEngpaesse = [...engpaesse].sort(
+    (a, b) => b.anteil_cases_prozent - a.anteil_cases_prozent
+  );
+  const top3 = sortierteEngpaesse.slice(0, 3);
 
   return (
     <div>
@@ -66,10 +86,43 @@ export default function Prozessanalyse() {
         Analyse der Prozessschritte und Engpässe.
       </p>
 
+      <h2 className="text-lg font-semibold mb-4">Größte Engpässe</h2>
+      <div className="grid grid-cols-3 gap-6 mb-10">
+        {top3.map((e, i) => {
+          const schwere = engpassSchwere(e.anteil_cases_prozent);
+          return (
+            <div key={e.aktivitaet} className="bg-white border border-gray-200 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="material-symbols-outlined" style={{ color: schwere.farbe }}>
+                  {i === 0 ? "warning" : "priority_high"}
+                </span>
+                <span className="text-sm text-gray-500">#{i + 1} {schwere.label}</span>
+              </div>
+              <p className="text-lg font-semibold text-gray-900 mb-1">{e.aktivitaet}</p>
+              <p className="text-3xl font-bold" style={{ color: schwere.farbe }}>
+                {e.anteil_cases_prozent.toFixed(1)}%
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                der Cases betroffen · {e.anzahl_bottlenecks.toLocaleString("de-DE")} Bottleneck-Instanzen
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
       <h2 className="text-lg font-semibold mb-4">Engpässe (Aktivitätsebene)</h2>
       <p className="text-gray-500 text-sm mb-4">
-        Durchschnittliche Verweildauer pro Aktivität (sortiert nach längster Dauer).
+        Verweildauer pro Aktivität, sortiert nach Anteil an Cases mit Bottleneck.
       </p>
+
+      <div className="mb-4 max-w-3xl flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-800">
+        <span className="material-symbols-outlined text-blue-500">info</span>
+        <span>
+          <strong>Wie wird ein Bottleneck berechnet?</strong> Ein einzelner Durchlauf einer
+          Aktivität (in einem konkreten Case) gilt als Bottleneck, wenn seine Dauer mehr als 20%
+          über dem Median genau dieser Aktivität liegt.
+        </span>
+      </div>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
@@ -79,28 +132,43 @@ export default function Prozessanalyse() {
               <th className="text-left px-6 py-3 font-medium text-gray-700">Ø Dauer</th>
               <th className="text-left px-6 py-3 font-medium text-gray-700">Median</th>
               <th className="text-left px-6 py-3 font-medium text-gray-700">Maximum</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-700">Anzahl</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-700">Anzahl Bottlenecks</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-700">Anteil an Cases</th>
               <th className="text-left px-6 py-3 font-medium text-gray-700 w-48"></th>
             </tr>
           </thead>
           <tbody>
-            {engpaesse.map((e, i) => {
-              const barWidth = (e.durchschnitt_sekunden / maxDurchschnitt) * 100;
+            {sortierteEngpaesse.map((e, i) => {
+              const schwere = engpassSchwere(e.anteil_cases_prozent);
+              const barWidth = Math.min(e.anteil_cases_prozent, 100);
               return (
                 <tr key={e.aktivitaet} className={i % 2 === 0 ? "" : "bg-gray-50"}>
-                  <td className="px-6 py-3 font-medium text-gray-900">{e.aktivitaet}</td>
-                  <td className="px-6 py-3 text-gray-700">{formatDauer(e.durchschnitt_sekunden)}</td>
-                  <td className="px-6 py-3 text-gray-700">{formatDauer(e.median_sekunden)}</td>
+                  <td className="px-6 py-3 font-medium text-gray-900">
+                    <div className="flex items-center gap-2">
+                      {e.aktivitaet}
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 ${schwere.textFarbe} ${schwere.badgeBg}`}
+                      >
+                        {schwere.label}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-3 text-gray-700" title={formatSekundenGenau(e.durchschnitt_sekunden)}>
+                    {formatDauer(e.durchschnitt_sekunden)}
+                  </td>
+                  <td className="px-6 py-3 text-gray-700" title={formatSekundenGenau(e.median_sekunden)}>
+                    {formatDauer(e.median_sekunden)}
+                  </td>
                   <td className="px-6 py-3 text-gray-700">{formatDauer(e.maximum_sekunden)}</td>
-                  <td className="px-6 py-3 text-gray-700">{e.anzahl.toLocaleString("de-DE")}</td>
+                  <td className="px-6 py-3 text-gray-700">{e.anzahl_bottlenecks.toLocaleString("de-DE")}</td>
+                  <td className={`px-6 py-3 font-medium ${schwere.textFarbe}`}>
+                    {e.anteil_cases_prozent.toFixed(1)}%
+                  </td>
                   <td className="px-6 py-3">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="h-2 rounded-full"
-                        style={{
-                          width: `${barWidth}%`,
-                          backgroundColor: i === 0 ? "#dc2626" : i <= 2 ? "#f59e0b" : "#7c3aed",
-                        }}
+                        style={{ width: `${barWidth}%`, backgroundColor: schwere.farbe }}
                       />
                     </div>
                   </td>
