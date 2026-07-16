@@ -162,12 +162,18 @@ def durchlaufzeit_verteilung(df: pd.DataFrame, case_col: str, timestamp_col: str
         "durchschnitt_sekunden": float(np.mean(durations)),
     }
 
-ENGPASS_SCHWELLENWERT = 1.2  # 20% über dem Median der jeweiligen Aktivität gilt als Bottleneck-Instanz
+IQR_FAKTOR = 1.5  # Tukey-Ausreißergrenze: Q3 + 1,5 * IQR gilt als Bottleneck-Instanz
 
 def engpassanalyse(df: pd.DataFrame, case_col: str, activity_col: str, timestamp_col: str) -> list[dict]:
     """Berechnet je Aktivität die Verweildauer-Statistik sowie Bottlenecks: Eine einzelne
-    Aktivitäts-Instanz (in einem Case) gilt als Bottleneck, wenn ihre Dauer mehr als 20%
-    über dem Median genau dieser Aktivität liegt."""
+    Aktivitäts-Instanz (in einem Case) gilt als Bottleneck, wenn ihre Dauer den Tukey-Ausreißerwert
+    dieser Aktivität überschreitet (Q3 + 1,5 * Interquartilsabstand). Dieses Maß berücksichtigt die
+    Streuung der jeweiligen Aktivität, statt einen fixen Anteil an Instanzen zu markieren.
+
+    Der Zeitstempel markiert den Abschluss einer Aktivität. Die Dauer bis zum Abschluss der
+    jeweils vorherigen Aktivität im selben Case wird daher der aktuellen (nicht der
+    vorherigen) Aktivität zugeordnet, da sie die Zeit widerspiegelt, die für deren
+    Fertigstellung benötigt wurde."""
     df = df.sort_values([case_col, timestamp_col]).copy()
 <<<<<<< backend/Datenvorverarbeitung.py
     df[timestamp_col] = _zeitstempel_vereinheitlichen(df[timestamp_col], timestamp_col)
@@ -175,13 +181,15 @@ def engpassanalyse(df: pd.DataFrame, case_col: str, activity_col: str, timestamp
 >>>>>>> backend/Datenvorverarbeitung.py
     df = df[df[timestamp_col].dt.normalize() != SENTINEL_DATUM]
 
-    df["_next_timestamp"] = df.groupby(case_col)[timestamp_col].shift(-1)
-    df["_dauer_sekunden"] = (df["_next_timestamp"] - df[timestamp_col]).dt.total_seconds()
+    df["_vorheriger_timestamp"] = df.groupby(case_col)[timestamp_col].shift(1)
+    df["_dauer_sekunden"] = (df[timestamp_col] - df["_vorheriger_timestamp"]).dt.total_seconds()
 
     gueltig = df.dropna(subset=["_dauer_sekunden"]).copy()
 
-    aktivitaet_median = gueltig.groupby(activity_col)["_dauer_sekunden"].transform("median")
-    gueltig["_ist_bottleneck"] = gueltig["_dauer_sekunden"] > aktivitaet_median * ENGPASS_SCHWELLENWERT
+    q1 = gueltig.groupby(activity_col)["_dauer_sekunden"].transform(lambda s: s.quantile(0.25))
+    q3 = gueltig.groupby(activity_col)["_dauer_sekunden"].transform(lambda s: s.quantile(0.75))
+    obere_grenze = q3 + IQR_FAKTOR * (q3 - q1)
+    gueltig["_ist_bottleneck"] = gueltig["_dauer_sekunden"] > obere_grenze
 
     stats = gueltig.groupby(activity_col)["_dauer_sekunden"].agg(
         durchschnitt="mean", median="median", maximum="max",
@@ -203,6 +211,8 @@ def engpassanalyse(df: pd.DataFrame, case_col: str, activity_col: str, timestamp
             "median_sekunden": float(row["median"]),
             "maximum_sekunden": float(row["maximum"]),
             "anzahl_bottlenecks": int(row["anzahl_bottlenecks"]),
+            "cases_mit_bottleneck": int(row["cases_mit_bottleneck"]),
+            "gesamt_anzahl_cases": int(gesamt_anzahl_cases),
             "anteil_cases_prozent": float(row["anteil_cases_prozent"]),
             "ist_engpass": bool(row["anzahl_bottlenecks"] > 0),
         }
