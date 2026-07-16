@@ -18,8 +18,8 @@ async def upload(
     activity: str = Form(...),
     timestamp: str = Form(...),
 ):
-    global _last_result, _last_df, _last_columns, _varianten
-    df = await datei_einlesen(file)
+    global _last_result
+    df = await datei_einlesen(file, case_id, activity, timestamp)
     kpis = durchlaufzeit_kpis(df, case_id, activity, timestamp)
     engpaesse = engpassanalyse(df, case_id, activity, timestamp)
     _last_result = {"filename": file.filename, "kpis": kpis, "engpaesse": engpaesse}
