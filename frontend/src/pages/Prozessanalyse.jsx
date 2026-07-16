@@ -145,13 +145,13 @@ export default function Prozessanalyse() {
               <th className="text-left px-6 py-3 font-medium text-gray-700">Maximum</th>
               <th
                 className="text-left px-6 py-3 font-medium text-gray-700"
-                title="Anzahl der Instanzen dieser Aktivität, deren Dauer über der Ausreißergrenze (Q3 + 1,5 × IQR) liegt"
+                title="Anzahl der Instanzen dieser Aktivität, deren Dauer über der Ausreißergrenze (Q3 + 1,5 × IQR) liegt. Zählt jedes Vorkommen einzeln — auch mehrfach im selben Case, wenn die Aktivität dort wiederholt auftritt."
               >
                 Anzahl Bottlenecks
               </th>
               <th
                 className="text-left px-6 py-3 font-medium text-gray-700"
-                title="Anteil aller Cases im Event Log, in denen diese Aktivität mindestens einmal zum Bottleneck wurde"
+                title="Anteil aller Cases im Event Log, in denen diese Aktivität mindestens einmal zum Bottleneck wurde. Zählt jeden Case nur einmal, auch wenn dort mehrere Bottleneck-Instanzen auftreten — daher kann dieser Wert von der Anzahl Bottlenecks abweichen."
               >
                 Anteil an Cases
               </th>
@@ -166,7 +166,7 @@ export default function Prozessanalyse() {
                 <tr key={e.aktivitaet} className={i % 2 === 0 ? "" : "bg-gray-50"}>
                   <td className="px-6 py-3 font-medium text-gray-900">
                     <div className="flex items-center gap-2">
-                      {e.aktivitaet}
+                      <span className="inline-block min-w-[230px]">{e.aktivitaet}</span>
                       <span
                         className={`inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 ${schwere.textFarbe} ${schwere.badgeBg}`}
                       >
