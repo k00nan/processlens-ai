@@ -4,6 +4,7 @@ import BpmnViewer from "bpmn-js/lib/NavigatedViewer";
 
 const BACKEND_URL = "http://localhost:8000";
 const MAX_GENERATIONS = 3;
+const MAX_CHAT_MESSAGES = 10;
 
 const VORSCHLAEGE = [
   "Welche Aktivität ist der größte Engpass und warum?",
@@ -43,8 +44,11 @@ function ChatTab({ datenVorhanden }) {
     );
   }
 
+  const chatCount = messages.filter((m) => m.rolle === "user").length;
+  const chatLimitReached = chatCount >= MAX_CHAT_MESSAGES;
+
   async function sendeFrage(frage) {
-    if (!frage.trim() || loading) return;
+    if (!frage.trim() || loading || chatLimitReached) return;
 
     const verlauf = messages.map((m) => ({ rolle: m.rolle, text: m.text }));
     setMessages((prev) => [...prev, { rolle: "user", text: frage }]);
@@ -73,6 +77,9 @@ function ChatTab({ datenVorhanden }) {
 
   return (
     <div className="mt-6">
+      <p className="text-sm text-gray-500 mb-2">
+        Nachrichten: {chatCount}/{MAX_CHAT_MESSAGES}
+      </p>
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col" style={{ height: "500px" }}>
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.length === 0 && (
@@ -87,7 +94,8 @@ function ChatTab({ datenVorhanden }) {
                   <button
                     key={frage}
                     onClick={() => sendeFrage(frage)}
-                    className="text-xs text-left px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                    disabled={chatLimitReached}
+                    className="text-xs text-left px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {frage}
                   </button>
@@ -127,6 +135,13 @@ function ChatTab({ datenVorhanden }) {
           </div>
         )}
 
+        {chatLimitReached && (
+          <div className="px-4 py-2 bg-yellow-50 border-t border-yellow-200 text-yellow-800 text-sm flex items-center gap-2">
+            <span className="material-symbols-outlined text-yellow-600 text-base">warning</span>
+            Chat-Limit erreicht ({MAX_CHAT_MESSAGES}/{MAX_CHAT_MESSAGES} Nachrichten verwendet).
+          </div>
+        )}
+
         <form
           onSubmit={(e) => { e.preventDefault(); sendeFrage(input); }}
           className="border-t border-gray-200 p-3 flex gap-2"
@@ -135,12 +150,13 @@ function ChatTab({ datenVorhanden }) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Frage zum Event Log stellen…"
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder={chatLimitReached ? "Chat-Limit erreicht" : "Frage zum Event Log stellen…"}
+            disabled={chatLimitReached}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
           <button
             type="submit"
-            disabled={loading || !input.trim()}
+            disabled={loading || !input.trim() || chatLimitReached}
             className="bg-primary text-white font-medium rounded-lg px-5 py-2 text-sm hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Senden
