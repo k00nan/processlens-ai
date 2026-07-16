@@ -97,6 +97,8 @@ def durchlaufzeit_kpis(df: pd.DataFrame, case_col: str, activity_col: str, times
 def engpassanalyse(df: pd.DataFrame, case_col: str, activity_col: str, timestamp_col: str) -> list[dict]:
     """Berechnet die durchschnittliche Verweildauer pro Aktivität (Activity-Level Bottlenecks)."""
     df = df.sort_values([case_col, timestamp_col]).copy()
+    df[timestamp_col] = _zeitstempel_vereinheitlichen(df[timestamp_col])
+    df = df[df[timestamp_col].dt.normalize() != SENTINEL_DATUM]
 
     df["_next_timestamp"] = df.groupby(case_col)[timestamp_col].shift(-1)
     df["_dauer_sekunden"] = (df["_next_timestamp"] - df[timestamp_col]).dt.total_seconds()
