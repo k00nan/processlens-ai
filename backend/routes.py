@@ -1,6 +1,6 @@
 from fastapi import APIRouter, File, Form, UploadFile
 
-from Datenvorverarbeitung import datei_einlesen, durchlaufzeit_kpis, engpassanalyse, case_traces_fuer_llm
+from Datenvorverarbeitung import datei_einlesen, durchlaufzeit_kpis, durchlaufzeit_verteilung, engpassanalyse, case_traces_fuer_llm
 from bpmn_generator import prozessvarianten, bpmn_fuer_variante_generieren
 
 router = APIRouter()
@@ -22,7 +22,8 @@ async def upload(
     df = await datei_einlesen(file, case_id, activity, timestamp)
     kpis = durchlaufzeit_kpis(df, case_id, activity, timestamp)
     engpaesse = engpassanalyse(df, case_id, activity, timestamp)
-    _last_result = {"filename": file.filename, "kpis": kpis, "engpaesse": engpaesse}
+    verteilung = durchlaufzeit_verteilung(df, case_id, timestamp)
+    _last_result = {"filename": file.filename, "kpis": kpis, "engpaesse": engpaesse, "verteilung": verteilung}
     _last_df = df
     _last_columns = {"case_id": case_id, "activity": activity, "timestamp": timestamp}
     _varianten = None
@@ -40,6 +41,13 @@ async def get_kpis():
     if _last_result is None:
         return {"available": False}
     return {"available": True, **_last_result}
+
+
+@router.get("/durchlaufzeit-verteilung")
+async def get_verteilung():
+    if _last_result is None or "verteilung" not in _last_result:
+        return {"available": False}
+    return {"available": True, "verteilung": _last_result["verteilung"]}
 
 
 @router.get("/engpaesse")
