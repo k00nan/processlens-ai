@@ -19,6 +19,11 @@ def prozessvarianten(traces: list[dict], top_n: int = 10) -> list[dict]:
     ]
 
 
+def gesamt_anzahl_varianten(traces: list[dict]) -> int:
+    """Zählt, wie viele unterschiedliche Trace-Varianten insgesamt vorkommen."""
+    return len({t["trace"] for t in traces})
+
+
 def bpmn_fuer_variante_generieren(trace: str) -> str:
     """Lässt Gemini aus einer einzelnen Prozessvariante ein BPMN 2.0 XML erzeugen."""
     prompt = f"""Du bist ein Business-Process-Modeling-Experte.

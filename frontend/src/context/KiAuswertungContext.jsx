@@ -6,6 +6,7 @@ export function KiAuswertungProvider({ children }) {
   const [activeTab, setActiveTab] = useState("prozessmodell");
 
   const [varianten, setVarianten] = useState(null);
+  const [gesamtAnzahlVarianten, setGesamtAnzahlVarianten] = useState(null);
   const [bpmnCache, setBpmnCache] = useState({});
   const [activeIdx, setActiveIdx] = useState(null);
   const [generationCount, setGenerationCount] = useState(0);
@@ -20,6 +21,7 @@ export function KiAuswertungProvider({ children }) {
   const value = {
     activeTab, setActiveTab,
     varianten, setVarianten,
+    gesamtAnzahlVarianten, setGesamtAnzahlVarianten,
     bpmnCache, setBpmnCache,
     activeIdx, setActiveIdx,
     generationCount, setGenerationCount,
