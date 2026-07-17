@@ -10,10 +10,14 @@ client = genai.Client(api_key=os.environ["GEMINI_KEY"])
 
 
 def frage_beantworten(
-    frage: str, verlauf: list[dict], kpis: dict, engpaesse: list[dict], varianten: list[dict] | None = None
+    frage: str,
+    verlauf: list[dict],
+    kpis: dict,
+    engpaesse: list[dict],
+    varianten: list[dict] | None = None,
+    language: str = "de",
 ) -> str:
-    """Beantwortet eine offene Frage zum Event Log auf Basis der berechneten Auswertungen
-    (KPIs, Engpässe, Prozessvarianten)."""
+    """Beantwortet eine offene Frage zum Event Log auf Basis der berechneten Auswertungen."""
     verlauf_text = "\n".join(
         f"{'Nutzer' if eintrag['rolle'] == 'user' else 'Assistent'}: {eintrag['text']}"
         for eintrag in verlauf
@@ -27,6 +31,8 @@ def frage_beantworten(
         if varianten
         else "Keine Prozessvarianten verfügbar."
     )
+
+    antwortsprache = "Englisch" if language == "en" else "Deutsch"
 
     prompt = f"""Du bist ein Process-Mining-Analyst und beantwortest Fragen zu einem konkreten Event Log.
 
@@ -44,7 +50,7 @@ Häufigste Prozessvarianten (Aktivitäten in zeitlicher Reihenfolge):
 
 Beantworte die Frage des Nutzers ausschließlich auf Basis dieser Daten. Wenn sich die Frage damit
 nicht beantworten lässt, sage das ehrlich, anstatt Zahlen zu erfinden. Antworte kurz und konkret,
-auf Deutsch.
+auf {antwortsprache}.
 
 {f"Bisheriger Chatverlauf:{chr(10)}{verlauf_text}{chr(10)}" if verlauf_text else ""}
 Frage: {frage}"""

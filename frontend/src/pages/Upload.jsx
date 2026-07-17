@@ -1,10 +1,12 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../context/LanguageContext";
 
 const BACKEND_URL = "http://localhost:8000";
 
 export default function Upload() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [file, setFile] = useState(null);
   const [columns, setColumns] = useState([]);
   const [mapping, setMapping] = useState({ caseId: "", activity: "", timestamp: "" });
@@ -58,7 +60,7 @@ export default function Upload() {
 
       if (!response.ok) {
         const { detail } = await response.json();
-        throw new Error(detail || "Upload fehlgeschlagen");
+        throw new Error(detail || t.uploadPage.uploadFailed);
       }
 
       const data = await response.json();
@@ -74,7 +76,7 @@ export default function Upload() {
     <div>
       <h1 className="text-3xl font-semibold mb-2">Upload</h1>
       <p className="text-gray-600 mb-6">
-        Laden Sie Ihren Event Log (CSV) hoch und ordnen Sie die Spalten zu.
+        {t.uploadPage.description}
       </p>
 
       <div
@@ -89,12 +91,12 @@ export default function Upload() {
         }`}
       >
         <span className="material-symbols-outlined text-5xl text-primary mb-3 block">cloud_upload</span>
-        <p className="text-purple-700 mb-4">CSV-Datei hierher ziehen oder klicken</p>
+        <p className="text-purple-700 mb-4">{t.uploadPage.dropzone}</p>
         <button
           onClick={(e) => { e.stopPropagation(); inputRef.current.click(); }}
           className="bg-primary-light text-purple-700 border border-border-purple rounded-lg px-5 py-2 cursor-pointer hover:bg-primary-hover transition-colors"
         >
-          Datei auswählen
+          {t.uploadPage.chooseFile}
         </button>
         <input
           ref={inputRef}
@@ -108,7 +110,7 @@ export default function Upload() {
       {!uploading && !error && file && (
         <div className="mt-4 max-w-xl flex items-center gap-2 bg-green-50 text-green-700 rounded-lg px-4 py-3">
           <span className="material-symbols-outlined">check_circle</span>
-          <span>Datei ausgewählt: {file.name}</span>
+          <span>{t.uploadPage.fileSelected} {file.name}</span>
         </div>
       )}
 
@@ -122,9 +124,9 @@ export default function Upload() {
       {columns.length > 0 && (
         <>
           <div className="mt-8 max-w-3xl border border-gray-200 rounded-xl p-6 bg-white">
-            <h2 className="text-lg font-semibold mb-1">Spalten zuordnen</h2>
+            <h2 className="text-lg font-semibold mb-1">{t.uploadPage.mapColumns}</h2>
             <p className="text-gray-500 text-sm mb-5">
-              Ordnen Sie die Spalten Ihres Event Logs den entsprechenden Feldern zu.
+              {t.uploadPage.mapDescription}
             </p>
             <div className="grid grid-cols-3 gap-6">
               <div>
@@ -140,7 +142,7 @@ export default function Upload() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Aktivität</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.uploadPage.activity}</label>
                 <select
                   value={mapping.activity}
                   onChange={(e) => setMapping({ ...mapping, activity: e.target.value })}
@@ -152,7 +154,7 @@ export default function Upload() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Zeitstempel</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.uploadPage.timestamp}</label>
                 <select
                   value={mapping.timestamp}
                   onChange={(e) => setMapping({ ...mapping, timestamp: e.target.value })}
@@ -170,14 +172,14 @@ export default function Upload() {
                 disabled={uploading}
                 className="bg-primary text-white font-medium rounded-lg px-8 py-3 hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {uploading ? "Wird hochgeladen…" : "Analyse starten"}
+                {uploading ? t.uploadPage.uploading : t.uploadPage.startAnalysis}
               </button>
             </div>
           </div>
 
           <div className="mt-4 max-w-3xl flex items-center gap-2 bg-blue-50 text-blue-700 rounded-lg px-4 py-3 text-sm">
             <span className="material-symbols-outlined text-blue-500">info</span>
-            Unterstütztes Format: CSV mit Spalten für Case-ID, Aktivität und Zeitstempel.
+            {t.uploadPage.supportedFormat}
           </div>
         </>
       )}
