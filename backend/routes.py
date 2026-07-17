@@ -4,8 +4,9 @@ import pandas as pd
 from fastapi import APIRouter, File, Form, Query, UploadFile
 
 from Datenvorverarbeitung import datei_einlesen, durchlaufzeit_kpis, durchlaufzeit_verteilung, engpassanalyse, case_traces_fuer_llm, SENTINEL_DATUM
-from bpmn_generator import prozessvarianten, bpmn_fuer_variante_generieren
+from bpmn_generator import prozessvarianten, gesamt_anzahl_varianten, bpmn_fuer_variante_generieren
 from chat_generator import frage_beantworten
+from abweichungsanalyse import soll_ist_abweichung_analysieren
 
 router = APIRouter()
 
@@ -13,6 +14,7 @@ _last_result: dict | None = None
 _last_df = None
 _last_columns: dict | None = None
 _varianten: list[dict] | None = None
+_gesamt_anzahl_varianten: int | None = None
 
 
 @router.post("/upload")
@@ -22,7 +24,7 @@ async def upload(
     activity: str = Form(...),
     timestamp: str = Form(...),
 ):
-    global _last_result, _last_df, _last_columns, _varianten
+    global _last_result, _last_df, _last_columns, _varianten, _gesamt_anzahl_varianten
     df = await datei_einlesen(file, case_id, activity, timestamp)
     kpis = durchlaufzeit_kpis(df, case_id, activity, timestamp)
     engpaesse = engpassanalyse(df, case_id, activity, timestamp)
@@ -31,6 +33,7 @@ async def upload(
     _last_df = df
     _last_columns = {"case_id": case_id, "activity": activity, "timestamp": timestamp}
     _varianten = None
+    _gesamt_anzahl_varianten = None
     return {
         "filename": file.filename,
         "rows": len(df),
@@ -97,11 +100,10 @@ async def get_engpaesse():
     return {"available": True, "engpaesse": _last_result["engpaesse"]}
 
 
-@router.get("/varianten")
-async def get_varianten():
-    global _varianten
+def _aktuelle_varianten() -> list[dict] | None:
+    global _varianten, _gesamt_anzahl_varianten
     if _last_df is None or _last_columns is None:
-        return {"available": False}
+        return None
     if _varianten is None:
         traces = case_traces_fuer_llm(
             _last_df,
@@ -110,7 +112,62 @@ async def get_varianten():
             _last_columns["timestamp"],
         )
         _varianten = prozessvarianten(traces)
-    return {"available": True, "varianten": _varianten}
+        _gesamt_anzahl_varianten = gesamt_anzahl_varianten(traces)
+    return _varianten
+
+
+@router.get("/varianten")
+async def get_varianten():
+    varianten = _aktuelle_varianten()
+    if varianten is None:
+        return {"available": False}
+    return {
+        "available": True,
+        "varianten": varianten,
+        "gesamt_anzahl_varianten": _gesamt_anzahl_varianten,
+    }
+
+
+@router.post("/abweichungsanalyse")
+async def abweichungsanalyse(
+    file: Optional[UploadFile] = File(None),
+    language: str = Form("de"),
+):
+    varianten = _aktuelle_varianten()
+    if varianten is None:
+        return {"available": False, "error": "Bitte zuerst einen Event Log hochladen."}
+
+    if file is not None and file.filename:
+        if not file.filename.lower().endswith(".bpmn"):
+            return {"available": False, "error": "Nur .bpmn-Dateien werden unterstützt."}
+        soll_bpmn_xml = (await file.read()).decode("utf-8")
+        vergleichs_varianten = varianten
+    else:
+        soll_bpmn_xml = None
+        vergleichs_varianten = varianten[1:]
+
+    try:
+        if language == "en":
+            ergebnis = soll_ist_abweichung_analysieren(
+                vergleichs_varianten,
+                soll_bpmn_xml=soll_bpmn_xml,
+                soll_trace=None if soll_bpmn_xml else varianten[0]["trace"],
+                language=language,
+            )
+        else:
+            ergebnis = soll_ist_abweichung_analysieren(
+                vergleichs_varianten,
+                soll_bpmn_xml=soll_bpmn_xml,
+                soll_trace=None if soll_bpmn_xml else varianten[0]["trace"],
+            )
+    except Exception as e:
+        return {"available": False, "error": str(e)}
+    return {
+        "available": True,
+        "abweichungen": ergebnis.get("abweichungen", []),
+        "zusammenfassung": ergebnis.get("zusammenfassung", ""),
+        "varianten": vergleichs_varianten,
+    }
 
 
 @router.post("/bpmn")
@@ -135,8 +192,18 @@ async def chat(request: dict):
         return {"available": False, "error": "Keine Frage angegeben."}
 
     verlauf = request.get("verlauf", [])
+    language = request.get("language", "de")
     try:
-        antwort = frage_beantworten(frage, verlauf, _last_result["kpis"], _last_result["engpaesse"])
+        varianten = _aktuelle_varianten()
+        antwort = frage_beantworten(
+            frage,
+            verlauf,
+            _last_result["kpis"],
+            _last_result["engpaesse"],
+            varianten,
+            _gesamt_anzahl_varianten,
+            _last_result.get("verteilung"),
+        )
     except Exception as e:
         return {"available": False, "error": str(e)}
     return {"available": True, "antwort": antwort}

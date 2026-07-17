@@ -5,23 +5,34 @@ import Uebersicht from "./pages/Uebersicht";
 import Prozessanalyse from "./pages/Prozessanalyse";
 import KiAuswertung from "./pages/KiAuswertung";
 import NotFound from "./pages/NotFound";
+import { KiAuswertungProvider } from "./context/KiAuswertungContext";
+import { LanguageProvider } from "./context/LanguageContext";
+import { ThemeProvider } from "./context/ThemeContext";
+import Einstellungen from "./pages/Einstellungen";
 
 function App() {
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen bg-surface">
-        <Sidebar />
-        <main className="ml-64 flex-1 p-10">
-          <Routes>
-            <Route path="/" element={<Navigate to="/upload" replace />} />
-            <Route path="/upload" element={<Upload />} />
-            <Route path="/uebersicht" element={<Uebersicht />} />
-            <Route path="/prozessanalyse" element={<Prozessanalyse />} />
-            <Route path="/ki-auswertung" element={<KiAuswertung />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-      </div>
+      <LanguageProvider>
+        <ThemeProvider>
+          <KiAuswertungProvider>
+            <div className="flex min-h-screen bg-surface">
+              <Sidebar />
+              <main className="ml-64 flex-1 p-10">
+                <Routes>
+                  <Route path="/" element={<Navigate to="/upload" replace />} />
+                  <Route path="/upload" element={<Upload />} />
+                  <Route path="/uebersicht" element={<Uebersicht />} />
+                  <Route path="/engpassanalyse" element={<Prozessanalyse />} />
+                  <Route path="/ki-auswertung" element={<KiAuswertung />} />
+                  <Route path="/einstellungen" element={<Einstellungen />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </main>
+            </div>
+          </KiAuswertungProvider>
+        </ThemeProvider>
+      </LanguageProvider>
     </BrowserRouter>
   );
 }

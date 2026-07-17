@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
+import { useLanguage } from "../context/LanguageContext";
+import { useTheme } from "../context/ThemeContext";
 import {
   BarChart,
   Bar,
@@ -29,15 +31,18 @@ function getDurchschnittBucket(verteilung) {
   return buckets[0].label;
 }
 
-function formatDauer(sekunden) {
-  if (sekunden < 60) return `${sekunden.toFixed(1)} Sek.`;
-  if (sekunden < 3600) return `${(sekunden / 60).toFixed(1)} Min.`;
-  if (sekunden < 86400) return `${(sekunden / 3600).toFixed(1)} Std.`;
-  return `${(sekunden / 86400).toFixed(1)} Tage`;
+function formatDauer(sekunden, t) {
+  if (sekunden < 60) return `${sekunden.toFixed(1)} ${t.common.secondsShort}`;
+  if (sekunden < 3600) return `${(sekunden / 60).toFixed(1)} ${t.common.minutesShort}`;
+  if (sekunden < 86400) return `${(sekunden / 3600).toFixed(1)} ${t.common.hoursShort}`;
+  return `${(sekunden / 86400).toFixed(1)} ${t.common.days}`;
 }
 
 export default function Uebersicht() {
   const location = useLocation();
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [kpis, setKpis] = useState(location.state?.kpis || null);
   const [filename, setFilename] = useState(location.state?.filename || null);
   const [verteilung, setVerteilung] = useState(null);
@@ -123,8 +128,8 @@ export default function Uebersicht() {
   if (loading) {
     return (
       <div>
-        <h1 className="text-3xl font-semibold mb-2">Übersicht</h1>
-        <p className="text-gray-600">Daten werden geladen…</p>
+        <h1 className="text-3xl font-semibold mb-2">{t.overview.title}</h1>
+        <p className="text-gray-600">{t.common.loadingData}</p>
       </div>
     );
   }
@@ -132,20 +137,20 @@ export default function Uebersicht() {
   if (!kpis) {
     return (
       <div>
-        <h1 className="text-3xl font-semibold mb-2">Übersicht</h1>
+        <h1 className="text-3xl font-semibold mb-2">{t.overview.title}</h1>
         <div className="mt-6 max-w-xl bg-blue-50 border border-blue-200 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-2">
             <span className="material-symbols-outlined text-blue-500">info</span>
-            <span className="text-blue-800 font-medium">Keine Daten vorhanden</span>
+            <span className="text-blue-800 font-medium">{t.common.noDataTitle}</span>
           </div>
           <p className="text-blue-700 text-sm">
-            Um die Übersicht anzuzeigen, müssen Sie zuerst einen Event Log hochladen.
+            {t.overview.noDataMessage}
           </p>
           <Link
             to="/upload"
             className="inline-block mt-4 bg-primary text-white font-medium rounded-lg px-6 py-2 hover:bg-purple-700 transition-colors"
           >
-            Zum Upload
+            {t.common.upload}
           </Link>
         </div>
       </div>
@@ -153,30 +158,30 @@ export default function Uebersicht() {
   }
 
   const cards = [
-    { label: "Anzahl Cases", value: kpis.anzahl_cases, icon: "folder_open" },
-    { label: "Anzahl Events", value: kpis.anzahl_events, icon: "event" },
-    { label: "Anzahl Aktivitäten", value: kpis.anzahl_aktivitaeten, icon: "category" },
+    { label: t.overview.totalCases, value: kpis.anzahl_cases, icon: "folder_open" },
+    { label: t.overview.totalEvents, value: kpis.anzahl_events, icon: "event" },
+    { label: t.overview.totalActivities, value: kpis.anzahl_aktivitaeten, icon: "category" },
   ];
 
   const durchlaufzeitCards = [
-    { label: "Minimum", value: formatDauer(kpis.durchlaufzeit_min_sekunden), icon: "timer" },
-    { label: "Maximum", value: formatDauer(kpis.durchlaufzeit_max_sekunden), icon: "timer" },
-    { label: "Durchschnitt", value: formatDauer(kpis.durchlaufzeit_durchschnitt_sekunden), icon: "avg_pace" },
-    { label: "Median", value: formatDauer(kpis.durchlaufzeit_median_sekunden), icon: "middle" },
+    { label: t.common.minimum, value: formatDauer(kpis.durchlaufzeit_min_sekunden, t), icon: "timer" },
+    { label: t.common.maximum, value: formatDauer(kpis.durchlaufzeit_max_sekunden, t), icon: "timer" },
+    { label: t.common.average, value: formatDauer(kpis.durchlaufzeit_durchschnitt_sekunden, t), icon: "avg_pace" },
+    { label: t.common.median, value: formatDauer(kpis.durchlaufzeit_median_sekunden, t), icon: "middle" },
   ];
 
   return (
     <div>
-      <h1 className="text-3xl font-semibold mb-2">Übersicht</h1>
+      <h1 className="text-3xl font-semibold mb-2">{t.overview.title}</h1>
       <p className="text-gray-600 mb-6">
-        Kennzahlen für <span className="font-medium text-gray-900">{filename}</span>.
+        {t.overview.metricsFor} <span className="font-medium text-gray-900">{filename}</span>.
       </p>
 
       {zeitraumMin && (
         <div className="flex items-center gap-4 mb-8 bg-white border border-gray-200 rounded-xl px-5 py-4">
           <span className="material-symbols-outlined text-primary">date_range</span>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-500">Von</label>
+            <label className="text-sm text-gray-500">{t.common.from}</label>
             <input
               type="date"
               value={filterVon}
@@ -187,7 +192,7 @@ export default function Uebersicht() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-500">Bis</label>
+            <label className="text-sm text-gray-500">{t.common.to}</label>
             <input
               type="date"
               value={filterBis}
@@ -201,18 +206,18 @@ export default function Uebersicht() {
             onClick={handleFilterApply}
             className="bg-primary text-white text-sm font-medium rounded-lg px-4 py-1.5 hover:bg-purple-700 transition-colors"
           >
-            Anwenden
+            {t.common.apply}
           </button>
           <button
             onClick={handleFilterReset}
             className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
           >
-            Zurücksetzen
+            {t.common.reset}
           </button>
         </div>
       )}
 
-      <h2 className="text-lg font-semibold mb-4">Allgemein</h2>
+      <h2 className="text-lg font-semibold mb-4">{t.overview.general}</h2>
       <div className="grid grid-cols-3 gap-6 mb-10">
         {cards.map((card) => (
           <div key={card.label} className="bg-white border border-gray-200 rounded-xl p-6">
@@ -220,12 +225,12 @@ export default function Uebersicht() {
               <span className="material-symbols-outlined text-primary">{card.icon}</span>
               <span className="text-sm text-gray-500">{card.label}</span>
             </div>
-            <p className="text-3xl font-bold text-gray-900">{card.value.toLocaleString("de-DE")}</p>
+            <p className="text-3xl font-bold text-gray-900">{card.value.toLocaleString(t.locale)}</p>
           </div>
         ))}
       </div>
 
-      <h2 className="text-lg font-semibold mb-4">Durchlaufzeit</h2>
+      <h2 className="text-lg font-semibold mb-4">{t.overview.throughputTime}</h2>
       <div className="grid grid-cols-4 gap-6 mb-10">
         {durchlaufzeitCards.map((card) => (
           <div key={card.label} className="bg-white border border-gray-200 rounded-xl p-6">
@@ -240,7 +245,7 @@ export default function Uebersicht() {
 
       {verteilung && (
         <>
-          <h2 className="text-lg font-semibold mb-4">Durchlaufzeitverteilung</h2>
+          <h2 className="text-lg font-semibold mb-4">{t.overview.throughputDistribution}</h2>
           <div className="bg-white border border-gray-200 rounded-xl p-6">
             <ResponsiveContainer width="100%" height={380}>
               <BarChart
@@ -249,44 +254,44 @@ export default function Uebersicht() {
               >
                 <CartesianGrid
                   vertical={false}
-                  stroke="#e1e0d9"
+                  stroke={isDark ? "#303245" : "#e1e0d9"}
                   strokeWidth={1}
                 />
                 <XAxis
                   dataKey="label"
-                  tick={{ fill: "#898781", fontSize: 11 }}
-                  axisLine={{ stroke: "#c3c2b7" }}
+                  tick={{ fill: isDark ? "#b7bbc9" : "#898781", fontSize: 11 }}
+                  axisLine={{ stroke: isDark ? "#3b3d52" : "#c3c2b7" }}
                   tickLine={false}
                   interval={0}
                   angle={-40}
                   textAnchor="end"
                   height={70}
-                  label={{ value: "Durchlaufzeit", position: "bottom", offset: 4, fill: "#52514e", fontSize: 13 }}
+                  label={{ value: t.overview.throughputAxis, position: "bottom", offset: 4, fill: isDark ? "#c8ccd8" : "#52514e", fontSize: 13 }}
                 />
                 <YAxis
-                  tick={{ fill: "#898781", fontSize: 12 }}
-                  axisLine={{ stroke: "#c3c2b7" }}
+                  tick={{ fill: isDark ? "#b7bbc9" : "#898781", fontSize: 12 }}
+                  axisLine={{ stroke: isDark ? "#3b3d52" : "#c3c2b7" }}
                   tickLine={false}
                   allowDecimals={false}
-                  label={{ value: "Anzahl Fälle", angle: -90, position: "insideLeft", offset: -4, fill: "#52514e", fontSize: 13 }}
+                  label={{ value: t.overview.casesAxis, angle: -90, position: "insideLeft", offset: -4, fill: isDark ? "#c8ccd8" : "#52514e", fontSize: 13 }}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#fcfcfb",
-                    border: "1px solid #e1e0d9",
+                    backgroundColor: isDark ? "#181927" : "#fcfcfb",
+                    border: `1px solid ${isDark ? "#303245" : "#e1e0d9"}`,
                     borderRadius: "8px",
                     fontSize: "13px",
                   }}
-                  labelStyle={{ color: "#0b0b0b", fontWeight: 600 }}
-                  itemStyle={{ color: "#52514e" }}
-                  formatter={(value) => [`${value} Cases`, "Anzahl"]}
+                  labelStyle={{ color: isDark ? "#f3f4f6" : "#0b0b0b", fontWeight: 600 }}
+                  itemStyle={{ color: isDark ? "#c8ccd8" : "#52514e" }}
+                  formatter={(value) => [`${value} ${t.common.cases}`, t.common.count]}
                 />
                 <ReferenceLine
                   x={getDurchschnittBucket(verteilung)}
-                  stroke="#0b0b0b"
+                  stroke={isDark ? "#e5e7eb" : "#0b0b0b"}
                   strokeDasharray="4 3"
                   strokeWidth={1.5}
-                  label={{ value: "Ø Durchlaufzeit", position: "top", fill: "#52514e", fontSize: 12 }}
+                  label={{ value: t.overview.avgThroughput, position: "top", fill: isDark ? "#c8ccd8" : "#52514e", fontSize: 12 }}
                 />
                 <Bar
                   dataKey="anzahl"
@@ -298,7 +303,7 @@ export default function Uebersicht() {
             </ResponsiveContainer>
             <div className="flex items-center gap-2 mt-4 text-sm text-gray-500 bg-gray-50 rounded-lg px-4 py-3">
               <span className="material-symbols-outlined text-gray-400">info</span>
-              Die Grafik zeigt die Verteilung der Durchlaufzeiten aller Cases.
+              {t.overview.chartInfo}
             </div>
           </div>
         </>
