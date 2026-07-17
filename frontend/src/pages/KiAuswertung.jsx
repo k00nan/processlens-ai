@@ -553,10 +553,10 @@ export default function KiAuswertung() {
           <span className="material-symbols-outlined mt-0.5 text-blue-500 text-lg">info</span>
           <p>
             {activeTab === "prozessmodell"
-              ? "Die Prozessgraphen werden mit KI generiert."
+              ? "Die Prozessgraphen werden mit KI generiert und können Fehler enthalten."
               : activeTab === "abweichungsanalyse"
-              ? "Die Abweichungsanalyse wird mit KI generiert."
-              : "Die Antworten im Chat werden mit KI generiert."}
+              ? "Die Abweichungsanalyse wird mit KI generiert und können Fehler enthalten."
+              : "Die Antworten im Chat werden mit KI generiert und können Fehler enthalten."}
           </p>
         </div>
       </div>
