@@ -17,9 +17,13 @@ def frage_beantworten(
     varianten: list[dict] | None = None,
     gesamt_anzahl_varianten: int | None = None,
     verteilung: dict | None = None,
+    abweichungsanalyse: dict | None = None,
+    language: str = "de",
 ) -> str:
     """Beantwortet eine offene Frage zum Event Log auf Basis der berechneten Auswertungen
-    (KPIs, Engpässe, Prozessvarianten, Durchlaufzeit-Verteilung)."""
+    (KPIs, Engpässe, Prozessvarianten, Durchlaufzeit-Verteilung, Soll-Ist-Vergleich)."""
+    antwortsprache = "Englisch" if language == "en" else "Deutsch"
+
     verlauf_text = "\n".join(
         f"{'Nutzer' if eintrag['rolle'] == 'user' else 'Assistent'}: {eintrag['text']}"
         for eintrag in verlauf
@@ -47,6 +51,12 @@ def frage_beantworten(
         else "Keine Durchlaufzeit-Verteilung verfügbar."
     )
 
+    abweichungsanalyse_text = (
+        json.dumps(abweichungsanalyse, ensure_ascii=False, indent=2)
+        if abweichungsanalyse
+        else "Noch kein Soll-Ist-Vergleich durchgeführt."
+    )
+
     prompt = f"""Du bist ein Process-Mining-Analyst und beantwortest Fragen zu einem konkreten Event Log.
 
 Hier sind die berechneten Auswertungen dieses Event Logs:
@@ -65,6 +75,10 @@ Häufigste Prozessvarianten (Aktivitäten in zeitlicher Reihenfolge):
 {varianten_text}
 
 {gesamt_varianten_text}
+
+Soll-Ist-Vergleich (Abweichungen der häufigsten Ist-Varianten vom Sollprozess, falls bereits
+durchgeführt):
+{abweichungsanalyse_text}
 
 Beantworte die Frage des Nutzers ausschließlich auf Basis dieser Daten. Wenn sich die Frage damit
 nicht beantworten lässt, sage das ehrlich, anstatt Zahlen zu erfinden. Antworte kurz und konkret,
