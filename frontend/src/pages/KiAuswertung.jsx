@@ -724,6 +724,7 @@ export default function KiAuswertung() {
                               <button
                                 onClick={() => generateForIndex(i, v.trace)}
                                 disabled={isGenerating || limitReached}
+                                title="Erzeugt ein BPMN 2.0 Prozessmodell für diese Variante"
                                 className="px-3 py-1 text-xs bg-primary text-white rounded-lg hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                               >
                                 {isGenerating ? "Generiert…" : limitReached ? "Limit erreicht" : "Generieren"}
