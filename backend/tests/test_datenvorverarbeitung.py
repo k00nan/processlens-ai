@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from fastapi import HTTPException, UploadFile
 
-from Datenvorverarbeitung import case_traces_fuer_llm, datei_einlesen, durchlaufzeit_kpis, engpassanalyse
+from datenvorverarbeitung import case_traces_fuer_llm, datei_einlesen, durchlaufzeit_kpis, engpassanalyse
 
 
 def _upload_file(inhalt: bytes, filename: str) -> UploadFile:

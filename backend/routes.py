@@ -3,7 +3,7 @@ from typing import Optional
 import pandas as pd
 from fastapi import APIRouter, File, Form, Query, UploadFile
 
-from Datenvorverarbeitung import datei_einlesen, durchlaufzeit_kpis, durchlaufzeit_verteilung, engpassanalyse, case_traces_fuer_llm, SENTINEL_DATUM
+from datenvorverarbeitung import datei_einlesen, durchlaufzeit_kpis, durchlaufzeit_verteilung, engpassanalyse, case_traces_fuer_llm, SENTINEL_DATUM
 from bpmn_generator import prozessvarianten, gesamt_anzahl_varianten, bpmn_fuer_variante_generieren
 from chat_generator import frage_beantworten
 from abweichungsanalyse import soll_ist_abweichung_analysieren
@@ -15,6 +15,7 @@ _last_df = None
 _last_columns: dict | None = None
 _varianten: list[dict] | None = None
 _gesamt_anzahl_varianten: int | None = None
+_letzte_abweichungsanalyse: dict | None = None
 
 
 @router.post("/upload")
@@ -24,7 +25,7 @@ async def upload(
     activity: str = Form(...),
     timestamp: str = Form(...),
 ):
-    global _last_result, _last_df, _last_columns, _varianten, _gesamt_anzahl_varianten
+    global _last_result, _last_df, _last_columns, _varianten, _gesamt_anzahl_varianten, _letzte_abweichungsanalyse
     df = await datei_einlesen(file, case_id, activity, timestamp)
     kpis = durchlaufzeit_kpis(df, case_id, activity, timestamp)
     engpaesse = engpassanalyse(df, case_id, activity, timestamp)
@@ -34,6 +35,7 @@ async def upload(
     _last_columns = {"case_id": case_id, "activity": activity, "timestamp": timestamp}
     _varianten = None
     _gesamt_anzahl_varianten = None
+    _letzte_abweichungsanalyse = None
     return {
         "filename": file.filename,
         "rows": len(df),
@@ -133,6 +135,7 @@ async def abweichungsanalyse(
     file: Optional[UploadFile] = File(None),
     language: str = Form("de"),
 ):
+    global _letzte_abweichungsanalyse
     varianten = _aktuelle_varianten()
     if varianten is None:
         return {"available": False, "error": "Bitte zuerst einen Event Log hochladen."}
@@ -162,12 +165,13 @@ async def abweichungsanalyse(
             )
     except Exception as e:
         return {"available": False, "error": str(e)}
-    return {
-        "available": True,
+
+    _letzte_abweichungsanalyse = {
         "abweichungen": ergebnis.get("abweichungen", []),
         "zusammenfassung": ergebnis.get("zusammenfassung", ""),
         "varianten": vergleichs_varianten,
     }
+    return {"available": True, **_letzte_abweichungsanalyse}
 
 
 @router.post("/bpmn")
@@ -203,6 +207,8 @@ async def chat(request: dict):
             varianten,
             _gesamt_anzahl_varianten,
             _last_result.get("verteilung"),
+            _letzte_abweichungsanalyse,
+            language,
         )
     except Exception as e:
         return {"available": False, "error": str(e)}

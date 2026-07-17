@@ -61,9 +61,13 @@ def test_chat_uebergibt_frage_verlauf_kpis_engpaesse_varianten_und_verteilung(mo
     _upload()
     aufrufe = []
 
-    def fake_frage_beantworten(frage, verlauf, kpis, engpaesse, varianten, gesamt_anzahl_varianten, verteilung):
+    def fake_frage_beantworten(
+        frage, verlauf, kpis, engpaesse, varianten, gesamt_anzahl_varianten, verteilung,
+        abweichungsanalyse, language,
+    ):
         aufrufe.append(
-            (frage, verlauf, kpis, engpaesse, varianten, gesamt_anzahl_varianten, verteilung)
+            (frage, verlauf, kpis, engpaesse, varianten, gesamt_anzahl_varianten, verteilung,
+             abweichungsanalyse, language)
         )
         return "ok"
 
@@ -77,7 +81,8 @@ def test_chat_uebergibt_frage_verlauf_kpis_engpaesse_varianten_und_verteilung(mo
 
     assert response.json() == {"available": True, "antwort": "ok"}
     assert len(aufrufe) == 1
-    frage, verlauf_arg, kpis, engpaesse, varianten, gesamt_anzahl_varianten, verteilung = aufrufe[0]
+    (frage, verlauf_arg, kpis, engpaesse, varianten, gesamt_anzahl_varianten, verteilung,
+     abweichungsanalyse, language) = aufrufe[0]
     assert frage == "Neue Frage"
     assert verlauf_arg == verlauf
     assert kpis["anzahl_cases"] == 2
@@ -85,6 +90,39 @@ def test_chat_uebergibt_frage_verlauf_kpis_engpaesse_varianten_und_verteilung(mo
     assert varianten is not None and len(varianten) >= 1
     assert gesamt_anzahl_varianten == len(varianten)
     assert verteilung is not None and "buckets" in verteilung
+    assert abweichungsanalyse is None
+    assert language == "de"
+
+
+def test_chat_uebergibt_abweichungsanalyse_falls_bereits_durchgefuehrt(monkeypatch):
+    _upload()
+    monkeypatch.setattr(
+        routes, "soll_ist_abweichung_analysieren",
+        lambda *a, **kw: {"abweichungen": [{"index": 1, "text": "X"}], "zusammenfassung": "Y"},
+    )
+    client.post("/abweichungsanalyse")
+
+    aufrufe = []
+
+    def fake_frage_beantworten(*args):
+        aufrufe.append(args)
+        return "ok"
+
+    monkeypatch.setattr(routes, "frage_beantworten", fake_frage_beantworten)
+
+    response = client.post("/chat", json={"frage": "Wie weicht der Prozess ab?", "language": "en"})
+
+    assert response.json() == {"available": True, "antwort": "ok"}
+    abweichungsanalyse = aufrufe[0][7]
+    language = aufrufe[0][8]
+    # Nur 1 Variante insgesamt (identischer Trace in beiden Cases) -> sie wird als
+    # Referenz genutzt und aus der Vergleichsliste ausgeschlossen -> vergleichs_varianten ist leer.
+    assert abweichungsanalyse == {
+        "abweichungen": [{"index": 1, "text": "X"}],
+        "zusammenfassung": "Y",
+        "varianten": [],
+    }
+    assert language == "en"
 
 
 def test_chat_ohne_verlauf_feld_uebergibt_leere_liste(monkeypatch):
