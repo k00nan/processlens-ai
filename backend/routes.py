@@ -194,19 +194,16 @@ async def chat(request: dict):
     verlauf = request.get("verlauf", [])
     language = request.get("language", "de")
     try:
-        if language == "en":
-            antwort = frage_beantworten(
-                frage,
-                verlauf,
-                _last_result["kpis"],
-                _last_result["engpaesse"],
-                _aktuelle_varianten(),
-                language=language,
-            )
-        else:
-            antwort = frage_beantworten(
-                frage, verlauf, _last_result["kpis"], _last_result["engpaesse"], _aktuelle_varianten()
-            )
+        varianten = _aktuelle_varianten()
+        antwort = frage_beantworten(
+            frage,
+            verlauf,
+            _last_result["kpis"],
+            _last_result["engpaesse"],
+            varianten,
+            _gesamt_anzahl_varianten,
+            _last_result.get("verteilung"),
+        )
     except Exception as e:
         return {"available": False, "error": str(e)}
     return {"available": True, "antwort": antwort}

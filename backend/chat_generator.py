@@ -15,9 +15,11 @@ def frage_beantworten(
     kpis: dict,
     engpaesse: list[dict],
     varianten: list[dict] | None = None,
-    language: str = "de",
+    gesamt_anzahl_varianten: int | None = None,
+    verteilung: dict | None = None,
 ) -> str:
-    """Beantwortet eine offene Frage zum Event Log auf Basis der berechneten Auswertungen."""
+    """Beantwortet eine offene Frage zum Event Log auf Basis der berechneten Auswertungen
+    (KPIs, Engpässe, Prozessvarianten, Durchlaufzeit-Verteilung)."""
     verlauf_text = "\n".join(
         f"{'Nutzer' if eintrag['rolle'] == 'user' else 'Assistent'}: {eintrag['text']}"
         for eintrag in verlauf
@@ -32,7 +34,18 @@ def frage_beantworten(
         else "Keine Prozessvarianten verfügbar."
     )
 
-    antwortsprache = "Englisch" if language == "en" else "Deutsch"
+    gesamt_varianten_text = (
+        f"Insgesamt gibt es {gesamt_anzahl_varianten} unterschiedliche Prozessvarianten "
+        "(oben stehen nur die häufigsten)."
+        if gesamt_anzahl_varianten is not None
+        else "Gesamtzahl der Prozessvarianten nicht verfügbar."
+    )
+
+    verteilung_text = (
+        json.dumps(verteilung, ensure_ascii=False, indent=2)
+        if verteilung
+        else "Keine Durchlaufzeit-Verteilung verfügbar."
+    )
 
     prompt = f"""Du bist ein Process-Mining-Analyst und beantwortest Fragen zu einem konkreten Event Log.
 
@@ -41,12 +54,17 @@ Hier sind die berechneten Auswertungen dieses Event Logs:
 Durchlaufzeit-KPIs:
 {json.dumps(kpis, ensure_ascii=False, indent=2)}
 
+Durchlaufzeit-Verteilung (Buckets mit Anzahl Cases je Zeitspanne):
+{verteilung_text}
+
 Engpässe je Aktivität (ein Bottleneck liegt vor, wenn eine einzelne Aktivitäts-Instanz die
 Ausreißergrenze dieser Aktivität überschreitet: Q3 + 1,5 × Interquartilsabstand, Tukey-Methode):
 {json.dumps(engpaesse, ensure_ascii=False, indent=2)}
 
 Häufigste Prozessvarianten (Aktivitäten in zeitlicher Reihenfolge):
 {varianten_text}
+
+{gesamt_varianten_text}
 
 Beantworte die Frage des Nutzers ausschließlich auf Basis dieser Daten. Wenn sich die Frage damit
 nicht beantworten lässt, sage das ehrlich, anstatt Zahlen zu erfinden. Antworte kurz und konkret,

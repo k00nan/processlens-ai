@@ -57,12 +57,14 @@ def test_chat_gibt_antwort_der_llm_funktion_zurueck(monkeypatch):
     assert response.json() == {"available": True, "antwort": "Die Antwort lautet 42."}
 
 
-def test_chat_uebergibt_frage_verlauf_kpis_engpaesse_und_varianten(monkeypatch):
+def test_chat_uebergibt_frage_verlauf_kpis_engpaesse_varianten_und_verteilung(monkeypatch):
     _upload()
     aufrufe = []
 
-    def fake_frage_beantworten(frage, verlauf, kpis, engpaesse, varianten):
-        aufrufe.append((frage, verlauf, kpis, engpaesse, varianten))
+    def fake_frage_beantworten(frage, verlauf, kpis, engpaesse, varianten, gesamt_anzahl_varianten, verteilung):
+        aufrufe.append(
+            (frage, verlauf, kpis, engpaesse, varianten, gesamt_anzahl_varianten, verteilung)
+        )
         return "ok"
 
     monkeypatch.setattr(routes, "frage_beantworten", fake_frage_beantworten)
@@ -75,12 +77,14 @@ def test_chat_uebergibt_frage_verlauf_kpis_engpaesse_und_varianten(monkeypatch):
 
     assert response.json() == {"available": True, "antwort": "ok"}
     assert len(aufrufe) == 1
-    frage, verlauf_arg, kpis, engpaesse, varianten = aufrufe[0]
+    frage, verlauf_arg, kpis, engpaesse, varianten, gesamt_anzahl_varianten, verteilung = aufrufe[0]
     assert frage == "Neue Frage"
     assert verlauf_arg == verlauf
     assert kpis["anzahl_cases"] == 2
     assert isinstance(engpaesse, list)
     assert varianten is not None and len(varianten) >= 1
+    assert gesamt_anzahl_varianten == len(varianten)
+    assert verteilung is not None and "buckets" in verteilung
 
 
 def test_chat_ohne_verlauf_feld_uebergibt_leere_liste(monkeypatch):
@@ -90,7 +94,7 @@ def test_chat_ohne_verlauf_feld_uebergibt_leere_liste(monkeypatch):
     aufrufe = []
     monkeypatch.setattr(
         routes, "frage_beantworten",
-        lambda frage, verlauf, kpis, engpaesse, varianten: aufrufe.append(verlauf) or "ok",
+        lambda frage, verlauf, *rest: aufrufe.append(verlauf) or "ok",
     )
 
     response = client.post("/chat", json={"frage": "Frage ohne Verlauf"})
