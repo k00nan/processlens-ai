@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext";
+import { useTheme } from "../context/ThemeContext";
 import {
   BarChart,
   Bar,
@@ -40,6 +41,8 @@ function formatDauer(sekunden, t) {
 export default function Uebersicht() {
   const location = useLocation();
   const { t } = useLanguage();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [kpis, setKpis] = useState(location.state?.kpis || null);
   const [filename, setFilename] = useState(location.state?.filename || null);
   const [verteilung, setVerteilung] = useState(null);
@@ -251,44 +254,44 @@ export default function Uebersicht() {
               >
                 <CartesianGrid
                   vertical={false}
-                  stroke="#e1e0d9"
+                  stroke={isDark ? "#303245" : "#e1e0d9"}
                   strokeWidth={1}
                 />
                 <XAxis
                   dataKey="label"
-                  tick={{ fill: "#898781", fontSize: 11 }}
-                  axisLine={{ stroke: "#c3c2b7" }}
+                  tick={{ fill: isDark ? "#b7bbc9" : "#898781", fontSize: 11 }}
+                  axisLine={{ stroke: isDark ? "#3b3d52" : "#c3c2b7" }}
                   tickLine={false}
                   interval={0}
                   angle={-40}
                   textAnchor="end"
                   height={70}
-                  label={{ value: t.overview.throughputAxis, position: "bottom", offset: 4, fill: "#52514e", fontSize: 13 }}
+                  label={{ value: t.overview.throughputAxis, position: "bottom", offset: 4, fill: isDark ? "#c8ccd8" : "#52514e", fontSize: 13 }}
                 />
                 <YAxis
-                  tick={{ fill: "#898781", fontSize: 12 }}
-                  axisLine={{ stroke: "#c3c2b7" }}
+                  tick={{ fill: isDark ? "#b7bbc9" : "#898781", fontSize: 12 }}
+                  axisLine={{ stroke: isDark ? "#3b3d52" : "#c3c2b7" }}
                   tickLine={false}
                   allowDecimals={false}
-                  label={{ value: t.overview.casesAxis, angle: -90, position: "insideLeft", offset: -4, fill: "#52514e", fontSize: 13 }}
+                  label={{ value: t.overview.casesAxis, angle: -90, position: "insideLeft", offset: -4, fill: isDark ? "#c8ccd8" : "#52514e", fontSize: 13 }}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#fcfcfb",
-                    border: "1px solid #e1e0d9",
+                    backgroundColor: isDark ? "#181927" : "#fcfcfb",
+                    border: `1px solid ${isDark ? "#303245" : "#e1e0d9"}`,
                     borderRadius: "8px",
                     fontSize: "13px",
                   }}
-                  labelStyle={{ color: "#0b0b0b", fontWeight: 600 }}
-                  itemStyle={{ color: "#52514e" }}
+                  labelStyle={{ color: isDark ? "#f3f4f6" : "#0b0b0b", fontWeight: 600 }}
+                  itemStyle={{ color: isDark ? "#c8ccd8" : "#52514e" }}
                   formatter={(value) => [`${value} ${t.common.cases}`, t.common.count]}
                 />
                 <ReferenceLine
                   x={getDurchschnittBucket(verteilung)}
-                  stroke="#0b0b0b"
+                  stroke={isDark ? "#e5e7eb" : "#0b0b0b"}
                   strokeDasharray="4 3"
                   strokeWidth={1.5}
-                  label={{ value: t.overview.avgThroughput, position: "top", fill: "#52514e", fontSize: 12 }}
+                  label={{ value: t.overview.avgThroughput, position: "top", fill: isDark ? "#c8ccd8" : "#52514e", fontSize: 12 }}
                 />
                 <Bar
                   dataKey="anzahl"

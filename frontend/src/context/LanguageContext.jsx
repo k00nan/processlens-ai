@@ -40,6 +40,10 @@ const translations = {
       languageDescription: "Wählen Sie die Sprache der Benutzeroberfläche.",
       german: "Deutsch",
       english: "Englisch",
+      themeTitle: "Darstellung",
+      themeDescription: "Wählen Sie zwischen hellem und dunklem Modus.",
+      light: "Hell",
+      dark: "Dunkel",
       defaultBadge: "Standard",
     },
     notFound: {
@@ -198,6 +202,10 @@ const translations = {
       languageDescription: "Choose the language of the user interface.",
       german: "German",
       english: "English",
+      themeTitle: "Appearance",
+      themeDescription: "Choose between light and dark mode.",
+      light: "Light",
+      dark: "Dark",
       defaultBadge: "Default",
     },
     notFound: {
