@@ -68,7 +68,7 @@ Häufigste Prozessvarianten (Aktivitäten in zeitlicher Reihenfolge):
 
 Beantworte die Frage des Nutzers ausschließlich auf Basis dieser Daten. Wenn sich die Frage damit
 nicht beantworten lässt, sage das ehrlich, anstatt Zahlen zu erfinden. Antworte kurz und konkret,
-auf Deutsch.
+auf {antwortsprache}.
 
 {f"Bisheriger Chatverlauf:{chr(10)}{verlauf_text}{chr(10)}" if verlauf_text else ""}
 Frage: {frage}"""

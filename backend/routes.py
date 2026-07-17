@@ -129,7 +129,10 @@ async def get_varianten():
 
 
 @router.post("/abweichungsanalyse")
-async def abweichungsanalyse(file: Optional[UploadFile] = File(None)):
+async def abweichungsanalyse(
+    file: Optional[UploadFile] = File(None),
+    language: str = Form("de"),
+):
     varianten = _aktuelle_varianten()
     if varianten is None:
         return {"available": False, "error": "Bitte zuerst einen Event Log hochladen."}
@@ -144,11 +147,19 @@ async def abweichungsanalyse(file: Optional[UploadFile] = File(None)):
         vergleichs_varianten = varianten[1:]
 
     try:
-        ergebnis = soll_ist_abweichung_analysieren(
-            vergleichs_varianten,
-            soll_bpmn_xml=soll_bpmn_xml,
-            soll_trace=None if soll_bpmn_xml else varianten[0]["trace"],
-        )
+        if language == "en":
+            ergebnis = soll_ist_abweichung_analysieren(
+                vergleichs_varianten,
+                soll_bpmn_xml=soll_bpmn_xml,
+                soll_trace=None if soll_bpmn_xml else varianten[0]["trace"],
+                language=language,
+            )
+        else:
+            ergebnis = soll_ist_abweichung_analysieren(
+                vergleichs_varianten,
+                soll_bpmn_xml=soll_bpmn_xml,
+                soll_trace=None if soll_bpmn_xml else varianten[0]["trace"],
+            )
     except Exception as e:
         return {"available": False, "error": str(e)}
     return {
@@ -181,6 +192,7 @@ async def chat(request: dict):
         return {"available": False, "error": "Keine Frage angegeben."}
 
     verlauf = request.get("verlauf", [])
+    language = request.get("language", "de")
     try:
         varianten = _aktuelle_varianten()
         antwort = frage_beantworten(

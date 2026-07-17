@@ -8,3 +8,142 @@
   --color-surface: #faf9fe;
   --color-border-purple: #b39ddb;
 }
+
+:root {
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
+  --color-primary: #8b5cf6;
+  --color-primary-light: #2b214f;
+  --color-primary-hover: rgba(139, 92, 246, 0.24);
+  --color-sidebar: #090719;
+  --color-surface: #10111a;
+  --color-border-purple: #6d58b8;
+}
+
+body {
+  background: var(--color-surface);
+}
+
+.dark .bg-white {
+  background-color: #181927 !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: #202132 !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #25273a !important;
+}
+
+.dark .bg-gray-200 {
+  background-color: #35364a !important;
+}
+
+.dark .bg-blue-50 {
+  background-color: #17243d !important;
+}
+
+.dark .bg-green-50 {
+  background-color: #102f25 !important;
+}
+
+.dark .bg-red-50 {
+  background-color: #351619 !important;
+}
+
+.dark .bg-yellow-50 {
+  background-color: #32280f !important;
+}
+
+.dark .bg-orange-100 {
+  background-color: #3b2411 !important;
+}
+
+.dark .bg-amber-100 {
+  background-color: #3a2c0d !important;
+}
+
+.dark .bg-red-100 {
+  background-color: #3a181c !important;
+}
+
+.dark .bg-purple-100 {
+  background-color: #2b214f !important;
+}
+
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700 {
+  color: #f3f4f6 !important;
+}
+
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-gray-400 {
+  color: #b7bbc9 !important;
+}
+
+.dark .text-blue-800,
+.dark .text-blue-700 {
+  color: #bfdbfe !important;
+}
+
+.dark .text-green-700 {
+  color: #86efac !important;
+}
+
+.dark .text-red-700 {
+  color: #fca5a5 !important;
+}
+
+.dark .text-yellow-800 {
+  color: #fde68a !important;
+}
+
+.dark .text-purple-700 {
+  color: #c4b5fd !important;
+}
+
+.dark .text-orange-700 {
+  color: #fdba74 !important;
+}
+
+.dark .text-amber-700 {
+  color: #fcd34d !important;
+}
+
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .border-blue-100,
+.dark .border-blue-200,
+.dark .border-red-200,
+.dark .border-yellow-200 {
+  border-color: #303245 !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #111827;
+  border-color: #3b3d52;
+  color: #f3f4f6;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #8d93a6;
+}
+
+.dark table {
+  color: #e5e7eb;
+}
+
+.dark .recharts-cartesian-axis-tick-value,
+.dark .recharts-label {
+  fill: #c8ccd8 !important;
+}
