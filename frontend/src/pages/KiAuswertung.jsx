@@ -391,6 +391,13 @@ function AbweichungsanalyseTab({
         )}
       </div>
 
+      {loading && (
+        <div className="mt-4 inline-flex items-center gap-2 bg-gray-100 text-gray-500 rounded-lg px-4 py-3 text-sm whitespace-nowrap">
+          <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+          Die Abweichungsanalyse wird generiert…
+        </div>
+      )}
+
       {error && (
         <div className="mt-4 max-w-xl p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
           {error}
@@ -608,6 +615,13 @@ export default function KiAuswertung() {
             </div>
           )}
 
+          {generatingIdx != null && (
+            <div className="mt-6 max-w-xl flex items-center gap-2 bg-gray-100 text-gray-500 rounded-lg px-4 py-3 text-sm">
+              <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+              Das Prozessmodell für Variante {generatingIdx + 1} wird generiert…
+            </div>
+          )}
+
           {bpmnCache[activeIdx] && (
             <div className="mt-6">
               <h2 className="text-xl font-medium mb-3">BPMN 2.0 Prozessmodell — Variante {activeIdx + 1}</h2>
@@ -620,7 +634,21 @@ export default function KiAuswertung() {
           )}
 
           {!varianten && (
-            <p className="text-gray-500 mt-4">Bitte zuerst eine Datei hochladen.</p>
+            <div className="mt-6 max-w-xl bg-blue-50 border border-blue-200 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="material-symbols-outlined text-blue-500">info</span>
+                <span className="text-blue-800 font-medium">Keine Daten vorhanden</span>
+              </div>
+              <p className="text-blue-700 text-sm">
+                Um die Prozessvarianten anzuzeigen, müssen Sie zuerst einen Event Log hochladen.
+              </p>
+              <Link
+                to="/upload"
+                className="inline-block mt-4 bg-primary text-white font-medium rounded-lg px-6 py-2 hover:bg-purple-700 transition-colors"
+              >
+                Zum Upload
+              </Link>
+            </div>
           )}
 
           {varianten && (
@@ -698,7 +726,7 @@ export default function KiAuswertung() {
                                 disabled={isGenerating || limitReached}
                                 className="px-3 py-1 text-xs bg-primary text-white rounded-lg hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                               >
-                                {isGenerating ? "..." : limitReached ? "Limit erreicht" : "Generieren"}
+                                {isGenerating ? "Generiert…" : limitReached ? "Limit erreicht" : "Generieren"}
                               </button>
                             )}
                           </td>

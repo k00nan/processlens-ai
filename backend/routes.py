@@ -182,8 +182,15 @@ async def chat(request: dict):
 
     verlauf = request.get("verlauf", [])
     try:
+        varianten = _aktuelle_varianten()
         antwort = frage_beantworten(
-            frage, verlauf, _last_result["kpis"], _last_result["engpaesse"], _aktuelle_varianten()
+            frage,
+            verlauf,
+            _last_result["kpis"],
+            _last_result["engpaesse"],
+            varianten,
+            _gesamt_anzahl_varianten,
+            _last_result.get("verteilung"),
         )
     except Exception as e:
         return {"available": False, "error": str(e)}
