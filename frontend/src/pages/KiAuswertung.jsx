@@ -612,7 +612,7 @@ export default function KiAuswertung() {
           {generatingIdx != null && (
             <div className="mt-6 max-w-xl flex items-center gap-2 bg-gray-100 text-gray-500 rounded-lg px-4 py-3 text-sm">
               <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
-              Das Prozessmodell für Variante {generatingIdx + 1} wird generiert…
+              {t.ai.generatingModel.replace("{idx}", generatingIdx + 1)}
             </div>
           )}
 
@@ -718,10 +718,10 @@ export default function KiAuswertung() {
                               <button
                                 onClick={() => generateForIndex(i, v.trace)}
                                 disabled={isGenerating || limitReached}
-                                title="Erzeugt ein BPMN 2.0 Prozessmodell für diese Variante"
+                                title={t.ai.generateTooltip}
                                 className="px-3 py-1 text-xs bg-primary text-white rounded-lg hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                               >
-                                {isGenerating ? "Generiert…" : limitReached ? "Limit erreicht" : "Generieren"}
+                                {isGenerating ? t.ai.generating : limitReached ? t.ai.limitReached : t.ai.generate}
                               </button>
                             )}
                           </td>

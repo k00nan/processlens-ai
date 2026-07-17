@@ -19,15 +19,15 @@ function formatSekundenGenau(sekunden, t) {
 
 function engpassSchwere(anteilProzent, t) {
   if (anteilProzent >= 40) {
-    return { farbe: "#dc2626", label: t.bottleneck.critical, textFarbe: "text-red-700", badgeBg: "bg-red-100" };
+    return { farbe: "#dc2626", label: t.bottleneck.critical, textFarbe: "text-red-700", badgeBg: "bg-red-100", icon: "warning" };
   }
   if (anteilProzent >= 25) {
-    return { farbe: "#f97316", label: t.bottleneck.high, textFarbe: "text-orange-700", badgeBg: "bg-orange-100" };
+    return { farbe: "#f97316", label: t.bottleneck.high, textFarbe: "text-orange-700", badgeBg: "bg-orange-100", icon: "warning" };
   }
   if (anteilProzent >= 10) {
-    return { farbe: "#f59e0b", label: t.bottleneck.medium, textFarbe: "text-amber-700", badgeBg: "bg-amber-100" };
+    return { farbe: "#f59e0b", label: t.bottleneck.medium, textFarbe: "text-amber-700", badgeBg: "bg-amber-100", icon: "priority_high" };
   }
-  return { farbe: "#7c3aed", label: t.bottleneck.low, textFarbe: "text-purple-700", badgeBg: "bg-purple-100" };
+  return { farbe: "#7c3aed", label: t.bottleneck.low, textFarbe: "text-purple-700", badgeBg: "bg-purple-100", icon: "trending_down" };
 }
 
 export default function Prozessanalyse() {
@@ -95,7 +95,7 @@ export default function Prozessanalyse() {
             <div key={e.aktivitaet} className="bg-white border border-gray-200 rounded-xl p-6">
               <div className="flex items-center gap-3 mb-2">
                 <span className="material-symbols-outlined" style={{ color: schwere.farbe }}>
-                  {i === 0 ? "warning" : "priority_high"}
+                  {schwere.icon}
                 </span>
                 <span className="text-sm text-gray-500">#{i + 1} {schwere.label}</span>
               </div>
