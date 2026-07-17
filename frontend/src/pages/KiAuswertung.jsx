@@ -2,19 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import BpmnViewer from "bpmn-js/lib/NavigatedViewer";
 import { useKiAuswertungState } from "../context/KiAuswertungContext";
+import { useLanguage } from "../context/LanguageContext";
 
 const BACKEND_URL = "http://localhost:8000";
 const MAX_GENERATIONS = 3;
 const MAX_CHAT_MESSAGES = 10;
-
-const VORSCHLAEGE = [
-  "Welche Aktivität ist der größte Engpass und warum?",
-  "Wie lange dauert der Prozess im Durchschnitt bis zum Abschluss?",
-  "Welche drei Verbesserungsmaßnahmen würdest du empfehlen?",
-  "Gibt es Aktivitäten, die auffällig oft zu Engpässen führen?",
-  "Welche Schlüsse lassen sich aus den häufigsten Prozessvarianten schließen?",
-  "Wie stark unterscheiden sich die häufigsten Prozessvarianten voneinander?",
-];
 
 function formatiereInlineText(text) {
   return text.split(/(\*\*[^*]+\*\*)/g).map((teil, i) =>
@@ -105,6 +97,7 @@ function TraceChips({ trace }) {
 }
 
 function ChatTab({ datenVorhanden, messages, setMessages }) {
+  const { language, t } = useLanguage();
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -119,16 +112,16 @@ function ChatTab({ datenVorhanden, messages, setMessages }) {
       <div className="mt-6 max-w-xl bg-blue-50 border border-blue-200 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-2">
           <span className="material-symbols-outlined text-blue-500">info</span>
-          <span className="text-blue-800 font-medium">Keine Daten vorhanden</span>
+          <span className="text-blue-800 font-medium">{t.common.noDataTitle}</span>
         </div>
         <p className="text-blue-700 text-sm">
-          Um Fragen zum Event Log zu stellen, müssen Sie zuerst einen Event Log hochladen.
+          {t.ai.chat.noDataMessage}
         </p>
         <Link
           to="/upload"
           className="inline-block mt-4 bg-primary text-white font-medium rounded-lg px-6 py-2 hover:bg-purple-700 transition-colors"
         >
-          Zum Upload
+          {t.common.upload}
         </Link>
       </div>
     );
@@ -150,16 +143,16 @@ function ChatTab({ datenVorhanden, messages, setMessages }) {
       const res = await fetch(`${BACKEND_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ frage, verlauf }),
+        body: JSON.stringify({ frage, verlauf, language }),
       });
       const data = await res.json();
       if (!data.available) {
-        setError(data.error || "Antwort fehlgeschlagen.");
+        setError(data.error || t.ai.chat.answerFailed);
         return;
       }
       setMessages((prev) => [...prev, { rolle: "assistant", text: data.antwort }]);
     } catch (e) {
-      setError("Fehler: " + e.message);
+      setError(t.common.errorPrefix + e.message);
     } finally {
       setLoading(false);
     }
@@ -168,19 +161,18 @@ function ChatTab({ datenVorhanden, messages, setMessages }) {
   return (
     <div className="mt-6">
       <p className="text-sm text-gray-500 mb-2">
-        Nachrichten: {chatCount}/{MAX_CHAT_MESSAGES}
+        {t.ai.chat.messages}: {chatCount}/{MAX_CHAT_MESSAGES}
       </p>
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col" style={{ height: "500px" }}>
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.length === 0 && (
             <div>
               <p className="text-gray-500 text-sm mb-3">
-                Stellen Sie eine offene Frage zum Event Log — die Antwort basiert auf den berechneten
-                Kennzahlen und Engpässen.
+                {t.ai.chat.intro}
               </p>
-              <p className="text-gray-500 text-xs mb-2">Beispiele:</p>
+              <p className="text-gray-500 text-xs mb-2">{t.ai.chat.examples}</p>
               <div className="flex flex-wrap gap-2">
-                {VORSCHLAEGE.map((frage) => (
+                {t.ai.suggestions.map((frage) => (
                   <button
                     key={frage}
                     onClick={() => sendeFrage(frage)}
@@ -211,7 +203,7 @@ function ChatTab({ datenVorhanden, messages, setMessages }) {
           {loading && (
             <div className="flex justify-start">
               <div className="max-w-[75%] px-4 py-2 rounded-lg text-sm bg-gray-100 text-gray-500">
-                Antwort wird generiert…
+                {t.ai.chat.generating}
               </div>
             </div>
           )}
@@ -228,7 +220,7 @@ function ChatTab({ datenVorhanden, messages, setMessages }) {
         {chatLimitReached && (
           <div className="px-4 py-2 bg-yellow-50 border-t border-yellow-200 text-yellow-800 text-sm flex items-center gap-2">
             <span className="material-symbols-outlined text-yellow-600 text-base">warning</span>
-            Chat-Limit erreicht ({MAX_CHAT_MESSAGES}/{MAX_CHAT_MESSAGES} Nachrichten verwendet).
+            {t.ai.chat.limitMessage.replaceAll("{limit}", MAX_CHAT_MESSAGES)}
           </div>
         )}
 
@@ -240,7 +232,7 @@ function ChatTab({ datenVorhanden, messages, setMessages }) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={chatLimitReached ? "Chat-Limit erreicht" : "Frage zum Event Log stellen…"}
+            placeholder={chatLimitReached ? t.ai.chat.limitUsed : t.ai.chat.placeholder}
             disabled={chatLimitReached}
             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
@@ -249,7 +241,7 @@ function ChatTab({ datenVorhanden, messages, setMessages }) {
             disabled={loading || !input.trim() || chatLimitReached}
             className="bg-primary text-white font-medium rounded-lg px-5 py-2 text-sm hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Senden
+            {t.ai.chat.send}
           </button>
         </form>
       </div>
@@ -261,6 +253,7 @@ function AbweichungsanalyseTab({
   datenVorhanden, varianten, bpmnFile, setBpmnFile,
   analyseVarianten, setAnalyseVarianten, abweichungen, setAbweichungen, zusammenfassung, setZusammenfassung,
 }) {
+  const { language, t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dragover, setDragover] = useState(false);
@@ -271,16 +264,16 @@ function AbweichungsanalyseTab({
       <div className="mt-6 max-w-xl bg-blue-50 border border-blue-200 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-2">
           <span className="material-symbols-outlined text-blue-500">info</span>
-          <span className="text-blue-800 font-medium">Keine Daten vorhanden</span>
+          <span className="text-blue-800 font-medium">{t.common.noDataTitle}</span>
         </div>
         <p className="text-blue-700 text-sm">
-          Um die Abweichungsanalyse zu nutzen, müssen Sie zuerst einen Event Log hochladen.
+          {t.ai.deviation.noDataMessage}
         </p>
         <Link
           to="/upload"
           className="inline-block mt-4 bg-primary text-white font-medium rounded-lg px-6 py-2 hover:bg-purple-700 transition-colors"
         >
-          Zum Upload
+          {t.common.upload}
         </Link>
       </div>
     );
@@ -312,6 +305,7 @@ function AbweichungsanalyseTab({
     if (bpmnFile) {
       formData.append("file", bpmnFile);
     }
+    formData.append("language", language);
 
     try {
       const res = await fetch(`${BACKEND_URL}/abweichungsanalyse`, {
@@ -320,14 +314,14 @@ function AbweichungsanalyseTab({
       });
       const data = await res.json();
       if (!data.available) {
-        setError(data.error || "Analyse fehlgeschlagen.");
+        setError(data.error || t.ai.deviation.failed);
         return;
       }
       setAnalyseVarianten(data.varianten);
       setAbweichungen(data.abweichungen);
       setZusammenfassung(data.zusammenfassung);
     } catch (e) {
-      setError("Fehler: " + e.message);
+      setError(t.common.errorPrefix + e.message);
     } finally {
       setLoading(false);
     }
@@ -336,8 +330,7 @@ function AbweichungsanalyseTab({
   return (
     <div className="mt-6">
       <p className="text-gray-500 text-sm mb-4">
-        Laden Sie optional den Soll-Prozess als BPMN 2.0 Datei hoch. Die KI vergleicht ihn mit den
-        {" "}{varianten?.length || 0} häufigsten tatsächlichen Prozessvarianten und beschreibt die Abweichungen.
+        {t.ai.deviation.description.replace("{count}", varianten?.length || 0)}
       </p>
 
       <div
@@ -353,7 +346,7 @@ function AbweichungsanalyseTab({
       >
         <span className="material-symbols-outlined text-4xl text-primary mb-2 block">upload_file</span>
         <p className="text-purple-700 text-sm">
-          {bpmnFile ? bpmnFile.name : "Soll-Prozess (.bpmn) hierher ziehen oder klicken"}
+          {bpmnFile ? bpmnFile.name : t.ai.deviation.dropzone}
         </p>
         <input
           ref={inputRef}
@@ -368,7 +361,7 @@ function AbweichungsanalyseTab({
         <div className="mt-4 inline-flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-800 whitespace-nowrap">
           <span className="material-symbols-outlined text-blue-500">info</span>
           <span>
-            <strong>Kein Sollprozess hochgeladen</strong> — es wird die häufigste Prozessvariante als Sollprozess verwendet.
+            <strong>{t.ai.deviation.noTargetTitle}</strong> - {t.ai.deviation.noTargetText}
           </span>
         </div>
       )}
@@ -379,14 +372,14 @@ function AbweichungsanalyseTab({
           disabled={loading}
           className="bg-primary text-white font-medium rounded-lg px-6 py-2 text-sm hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          {loading ? "Analyse läuft…" : "Abweichung analysieren"}
+          {loading ? t.ai.deviation.running : t.ai.deviation.start}
         </button>
         {bpmnFile && (
           <button
             onClick={() => setBpmnFile(null)}
             className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
           >
-            Datei entfernen
+            {t.ai.deviation.removeFile}
           </button>
         )}
       </div>
@@ -402,7 +395,7 @@ function AbweichungsanalyseTab({
           <div className="bg-white border border-gray-200 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-primary">fact_check</span>
-              Ist-Ablauf & Abweichungsanalyse
+              {t.ai.actualFlow}
             </h2>
             <div className="space-y-5">
               {analyseVarianten.map((v, i) => {
@@ -419,13 +412,13 @@ function AbweichungsanalyseTab({
                       </span>
                       <div>
                         <p className="text-xs text-gray-500 mb-1">
-                          {v.anteil}% der Cases · {v.anzahl.toLocaleString("de-DE")} Fälle
+                          {v.anteil}% {t.common.cases} · {v.anzahl.toLocaleString(t.locale)} {t.common.cases}
                         </p>
                         <TraceChips trace={v.trace} />
                       </div>
                     </div>
                     <div className="text-sm text-gray-700">
-                      {eintrag?.text || "Keine Analyse verfügbar."}
+                      {eintrag?.text || t.ai.noAnalysis}
                     </div>
                   </div>
                 );
@@ -437,7 +430,7 @@ function AbweichungsanalyseTab({
             <div className="bg-white border border-gray-200 rounded-xl p-6">
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">summarize</span>
-                Zusammenfassung
+                {t.ai.summary}
               </h2>
               <div className="text-sm">{renderAnalyseText(zusammenfassung)}</div>
             </div>
@@ -449,6 +442,7 @@ function AbweichungsanalyseTab({
 }
 
 export default function KiAuswertung() {
+  const { t } = useLanguage();
   const {
     activeTab, setActiveTab,
     varianten, setVarianten,
@@ -500,7 +494,7 @@ export default function KiAuswertung() {
       canvas.zoom(canvas.zoom() * 0.85);
     }).catch((err) => {
       if (abgebrochen) return;
-      setError("BPMN-Rendering fehlgeschlagen: " + err.message);
+      setError(t.ai.bpmnFailed + err.message);
     });
 
     return () => {
@@ -525,38 +519,38 @@ export default function KiAuswertung() {
       });
       const data = await res.json();
       if (!data.available) {
-        setError(data.error || "BPMN-Generierung fehlgeschlagen.");
+        setError(data.error || t.ai.generationFailed);
         return;
       }
       setBpmnCache((prev) => ({ ...prev, [idx]: data.bpmn_xml }));
       setGenerationCount((c) => c + 1);
       setActiveIdx(idx);
     } catch (e) {
-      setError("Fehler: " + e.message);
+      setError(t.common.errorPrefix + e.message);
     } finally {
       setGeneratingIdx(null);
     }
   }
 
   const tabs = [
-    { id: "prozessmodell", label: "Prozessvarianten" },
-    { id: "abweichungsanalyse", label: "Soll-Ist-Vergleich" },
-    { id: "chat", label: "Chat" },
+    { id: "prozessmodell", label: t.ai.tabs.processModel },
+    { id: "abweichungsanalyse", label: t.ai.tabs.deviation },
+    { id: "chat", label: t.ai.tabs.chat },
   ];
 
   return (
     <div>
-      <h1 className="text-3xl font-semibold mb-6">KI-Auswertung</h1>
+      <h1 className="text-3xl font-semibold mb-6">{t.ai.title}</h1>
 
       <div className="mb-6 max-w-2xl rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 shadow-sm">
         <div className="flex items-start gap-3">
           <span className="material-symbols-outlined mt-0.5 text-blue-500 text-lg">info</span>
           <p>
             {activeTab === "prozessmodell"
-              ? "Die Prozessgraphen werden mit KI generiert und können Fehler enthalten."
+              ? t.ai.warnings.processModel
               : activeTab === "abweichungsanalyse"
-              ? "Die Abweichungsanalyse wird mit KI generiert und können Fehler enthalten."
-              : "Die Antworten im Chat werden mit KI generiert und können Fehler enthalten."}
+              ? t.ai.warnings.deviation
+              : t.ai.warnings.chat}
           </p>
         </div>
       </div>
@@ -590,16 +584,16 @@ export default function KiAuswertung() {
               <div className="bg-white border border-gray-200 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="material-symbols-outlined text-primary">account_tree</span>
-                  <span className="text-sm text-gray-500">Varianten insgesamt</span>
+                  <span className="text-sm text-gray-500">{t.ai.totalVariants}</span>
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {gesamtAnzahlVarianten != null ? gesamtAnzahlVarianten.toLocaleString("de-DE") : "–"}
+                  {gesamtAnzahlVarianten != null ? gesamtAnzahlVarianten.toLocaleString(t.locale) : "-"}
                 </p>
               </div>
               <div className="bg-white border border-gray-200 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="material-symbols-outlined text-primary">pie_chart</span>
-                  <span className="text-sm text-gray-500">Abdeckung Top 10 (Anteil an Cases)</span>
+                  <span className="text-sm text-gray-500">{t.ai.topCoverage}</span>
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
                   {varianten.reduce((summe, v) => summe + v.anteil, 0).toFixed(1)}%
@@ -610,7 +604,7 @@ export default function KiAuswertung() {
 
           {bpmnCache[activeIdx] && (
             <div className="mt-6">
-              <h2 className="text-xl font-medium mb-3">BPMN 2.0 Prozessmodell — Variante {activeIdx + 1}</h2>
+              <h2 className="text-xl font-medium mb-3">{t.ai.bpmnHeading} {activeIdx + 1}</h2>
               <div
                 ref={containerRef}
                 className="w-full border border-gray-200 rounded-lg bg-white overflow-hidden p-4"
@@ -620,15 +614,15 @@ export default function KiAuswertung() {
           )}
 
           {!varianten && (
-            <p className="text-gray-500 mt-4">Bitte zuerst eine Datei hochladen.</p>
+            <p className="text-gray-500 mt-4">{t.ai.noUpload}</p>
           )}
 
           {varianten && (
             <div className="mt-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-medium">Top 10 Prozessvarianten</h2>
+                <h2 className="text-xl font-medium">{t.ai.topVariants}</h2>
                 <span className="text-sm text-gray-500">
-                  Generierungen: {generationCount}/{MAX_GENERATIONS}
+                  {t.ai.generations}: {generationCount}/{MAX_GENERATIONS}
                 </span>
               </div>
 
@@ -637,15 +631,15 @@ export default function KiAuswertung() {
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
                       <th className="text-left px-6 py-3 font-medium text-gray-700 w-12">#</th>
-                      <th className="text-left px-6 py-3 font-medium text-gray-700">Variante</th>
-                      <th className="text-left px-6 py-3 font-medium text-gray-700 w-28">Anzahl</th>
+                      <th className="text-left px-6 py-3 font-medium text-gray-700">{t.ai.variant}</th>
+                      <th className="text-left px-6 py-3 font-medium text-gray-700 w-28">{t.common.count}</th>
                       <th
                         className="text-left px-6 py-3 font-medium text-gray-700 w-40"
-                        title="Anteil dieser Variante an allen Cases im Event Log"
+                        title={t.ai.shareTitle}
                       >
-                        Anteil
+                        {t.ai.share}
                       </th>
-                      <th className="text-left px-6 py-3 font-medium text-gray-700 w-32">Prozessmodell</th>
+                      <th className="text-left px-6 py-3 font-medium text-gray-700 w-32">{t.ai.processModel}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -669,7 +663,7 @@ export default function KiAuswertung() {
                             <TraceChips trace={v.trace} />
                           </td>
                           <td className="px-6 py-4 align-top text-gray-700">
-                            {v.anzahl.toLocaleString("de-DE")}
+                            {v.anzahl.toLocaleString(t.locale)}
                           </td>
                           <td className="px-6 py-4 align-top">
                             <div className="text-gray-700 mb-1">{v.anteil}%</div>
@@ -683,14 +677,14 @@ export default function KiAuswertung() {
                           <td className="px-6 py-4 align-top">
                             {isActive && isCached ? (
                               <span className="inline-block px-3 py-1 text-xs bg-gray-200 text-gray-500 rounded-lg cursor-default">
-                                Angezeigt
+                                {t.ai.shown}
                               </span>
                             ) : isCached ? (
                               <button
                                 onClick={() => setActiveIdx(i)}
                                 className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
                               >
-                                Anzeigen
+                                {t.ai.show}
                               </button>
                             ) : (
                               <button
@@ -698,7 +692,7 @@ export default function KiAuswertung() {
                                 disabled={isGenerating || limitReached}
                                 className="px-3 py-1 text-xs bg-primary text-white rounded-lg hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                               >
-                                {isGenerating ? "..." : limitReached ? "Limit erreicht" : "Generieren"}
+                                {isGenerating ? "..." : limitReached ? t.ai.limitReached : t.ai.generate}
                               </button>
                             )}
                           </td>

@@ -10,20 +10,17 @@ client = genai.Client(api_key=os.environ["GEMINI_KEY"])
 
 
 def soll_ist_abweichung_analysieren(
-    varianten: list[dict], soll_bpmn_xml: str | None = None, soll_trace: str | None = None
+    varianten: list[dict],
+    soll_bpmn_xml: str | None = None,
+    soll_trace: str | None = None,
+    language: str = "de",
 ) -> dict:
-    """Lässt Gemini die häufigsten Ist-Prozessvarianten mit dem Sollprozess vergleichen.
-    Gibt pro Variante eine kurze Abweichungsbeschreibung zurück (strukturiert, damit sie im
-    Frontend direkt neben dem jeweiligen Ist-Ablauf angezeigt werden kann) sowie eine
-    Gesamtzusammenfassung.
-
-    Der Sollprozess wird entweder als BPMN 2.0 XML übergeben, oder — falls keine Datei
-    hochgeladen wurde — als Trace der häufigsten tatsächlichen Prozessvariante angenommen."""
+    """Vergleicht Ist-Prozessvarianten mit einem Sollprozess und liefert strukturierte Texte."""
     if soll_bpmn_xml:
         soll_beschreibung = f"Soll-Prozess (BPMN 2.0 XML):\n{soll_bpmn_xml}"
     else:
         soll_beschreibung = (
-            "Soll-Prozess (kein BPMN-Sollprozess hochgeladen — daher wird die häufigste "
+            "Soll-Prozess (kein BPMN-Sollprozess hochgeladen - daher wird die häufigste "
             f"tatsächliche Prozessvariante als Referenz angenommen):\n{soll_trace}"
         )
 
@@ -31,6 +28,7 @@ def soll_ist_abweichung_analysieren(
         f"{i + 1}. ({v['anteil']}% der Cases, {v['anzahl']} Fälle): {v['trace']}"
         for i, v in enumerate(varianten)
     )
+    antwortsprache = "Englisch" if language == "en" else "Deutsch"
 
     prompt = f"""Du bist ein Process-Mining-Analyst. Vergleiche die tatsächlichen Prozessvarianten
 (Ist-Prozess) mit dem vorgegebenen Soll-Prozess.
@@ -54,7 +52,7 @@ Antworte AUSSCHLIESSLICH mit validem JSON in genau diesem Format, ohne Markdown-
 }}
 
 Der "index" muss genau der Nummerierung der Ist-Varianten oben entsprechen (ein Eintrag pro
-Variante). Antworte auf Deutsch."""
+Variante). Antworte auf {antwortsprache}."""
 
     response = client.models.generate_content(
         model="gemini-3-flash-preview",
