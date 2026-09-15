@@ -36,11 +36,11 @@ def _quota_fehler() -> ClientError:
     )
 
 
-def _wirft_429_beim_generieren(monkeypatch, ki_client):
-    def fake_generate_content(*args, **kwargs):
+def _wirft_429_beim_generieren(monkeypatch, modul):
+    def fake_generate_text(*args, **kwargs):
         raise _quota_fehler()
 
-    monkeypatch.setattr(ki_client.models, "generate_content", fake_generate_content)
+    monkeypatch.setattr(modul, "generate_text", fake_generate_text)
 
 
 @pytest.fixture(autouse=True)
@@ -63,7 +63,7 @@ def _upload():
 
 def test_chat_faengt_429_kontingentfehler_von_gemini_sauber_ab(monkeypatch):
     _upload()
-    _wirft_429_beim_generieren(monkeypatch, chat_generator.client)
+    _wirft_429_beim_generieren(monkeypatch, chat_generator)
 
     response = client.post("/chat", json={"frage": "Wie lange dauert der Prozess?", "verlauf": []})
     daten = response.json()
@@ -77,7 +77,7 @@ def test_chat_faengt_429_kontingentfehler_von_gemini_sauber_ab(monkeypatch):
 
 
 def test_bpmn_generierung_faengt_429_kontingentfehler_von_gemini_sauber_ab(monkeypatch):
-    _wirft_429_beim_generieren(monkeypatch, bpmn_generator.client)
+    _wirft_429_beim_generieren(monkeypatch, bpmn_generator)
 
     response = client.post("/bpmn", json={"trace": "Start -> End"})
     daten = response.json()
@@ -90,7 +90,7 @@ def test_bpmn_generierung_faengt_429_kontingentfehler_von_gemini_sauber_ab(monke
 
 def test_abweichungsanalyse_faengt_429_kontingentfehler_von_gemini_sauber_ab(monkeypatch):
     _upload()
-    _wirft_429_beim_generieren(monkeypatch, abweichungsanalyse.client)
+    _wirft_429_beim_generieren(monkeypatch, abweichungsanalyse)
 
     response = client.post("/abweichungsanalyse")
     daten = response.json()

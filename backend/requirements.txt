@@ -4,4 +4,6 @@ pandas
 python-multipart
 pytest
 google-genai
+anthropic
+openai
 python-dotenv

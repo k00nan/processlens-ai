@@ -1,5 +1,4 @@
 import io
-from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -128,19 +127,19 @@ def test_varianten_endpoint_liefert_korrekt_gezaehlte_varianten():
 # --- bpmn_fuer_variante_generieren() (mit gemocktem LLM-Call) ------------------------
 
 
-def _mock_gemini(monkeypatch, text):
+def _mock_llm(monkeypatch, text):
     aufrufe = []
 
-    def fake_generate_content(model, contents):
-        aufrufe.append((model, contents))
-        return SimpleNamespace(text=text)
+    def fake_generate_text(prompt):
+        aufrufe.append(prompt)
+        return text
 
-    monkeypatch.setattr(bpmn_generator.client.models, "generate_content", fake_generate_content)
+    monkeypatch.setattr(bpmn_generator, "generate_text", fake_generate_text)
     return aufrufe
 
 
 def test_bpmn_generieren_gibt_xml_unveraendert_zurueck_ohne_codeblock(monkeypatch):
-    _mock_gemini(monkeypatch, "<bpmn:definitions>...</bpmn:definitions>")
+    _mock_llm(monkeypatch, "<bpmn:definitions>...</bpmn:definitions>")
 
     ergebnis = bpmn_generator.bpmn_fuer_variante_generieren("Start -> End")
 
@@ -149,7 +148,7 @@ def test_bpmn_generieren_gibt_xml_unveraendert_zurueck_ohne_codeblock(monkeypatc
 
 def test_bpmn_generieren_entfernt_markdown_codeblock(monkeypatch):
     roh = "```xml\n<bpmn:definitions>...</bpmn:definitions>\n```"
-    _mock_gemini(monkeypatch, roh)
+    _mock_llm(monkeypatch, roh)
 
     ergebnis = bpmn_generator.bpmn_fuer_variante_generieren("Start -> End")
 
@@ -157,11 +156,11 @@ def test_bpmn_generieren_entfernt_markdown_codeblock(monkeypatch):
 
 
 def test_bpmn_generieren_uebergibt_trace_im_prompt(monkeypatch):
-    aufrufe = _mock_gemini(monkeypatch, "<bpmn:definitions />")
+    aufrufe = _mock_llm(monkeypatch, "<bpmn:definitions />")
 
     bpmn_generator.bpmn_fuer_variante_generieren("Start -> Middle -> End")
 
-    _, prompt = aufrufe[0]
+    prompt = aufrufe[0]
     assert "Start -> Middle -> End" in prompt
 
 

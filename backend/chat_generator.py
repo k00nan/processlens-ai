@@ -1,12 +1,6 @@
 import json
-import os
 
-from dotenv import load_dotenv
-from google import genai
-
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
-
-client = genai.Client(api_key=os.environ["GEMINI_KEY"])
+from llm_client import generate_text
 
 
 def frage_beantworten(
@@ -87,9 +81,4 @@ auf {antwortsprache}.
 {f"Bisheriger Chatverlauf:{chr(10)}{verlauf_text}{chr(10)}" if verlauf_text else ""}
 Frage: {frage}"""
 
-    response = client.models.generate_content(
-        model="gemini-3-flash-preview",
-        contents=prompt,
-    )
-
-    return response.text.strip()
+    return generate_text(prompt)
