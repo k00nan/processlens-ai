@@ -1,12 +1,6 @@
-import os
 from collections import Counter
 
-from dotenv import load_dotenv
-from google import genai
-
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
-
-client = genai.Client(api_key=os.environ["GEMINI_KEY"])
+from llm_client import generate_text
 
 
 def prozessvarianten(traces: list[dict], top_n: int = 10) -> list[dict]:
@@ -25,7 +19,7 @@ def gesamt_anzahl_varianten(traces: list[dict]) -> int:
 
 
 def bpmn_fuer_variante_generieren(trace: str) -> str:
-    """Lässt Gemini aus einer einzelnen Prozessvariante ein BPMN 2.0 XML erzeugen."""
+    """Lässt ein LLM aus einer einzelnen Prozessvariante ein BPMN 2.0 XML erzeugen."""
     prompt = f"""Du bist ein Business-Process-Modeling-Experte.
 
 Gegeben ist folgende Prozessvariante (Aktivitäten in zeitlicher Reihenfolge):
@@ -44,12 +38,7 @@ Anforderungen:
 
 Antworte ausschließlich mit dem BPMN 2.0 XML:"""
 
-    response = client.models.generate_content(
-        model="gemini-3-flash-preview",
-        contents=prompt,
-    )
-
-    bpmn_xml = response.text.strip()
+    bpmn_xml = generate_text(prompt)
     if bpmn_xml.startswith("```"):
         bpmn_xml = bpmn_xml.split("\n", 1)[1]
         if bpmn_xml.endswith("```"):

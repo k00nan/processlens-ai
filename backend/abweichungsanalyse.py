@@ -1,12 +1,6 @@
 import json
-import os
 
-from dotenv import load_dotenv
-from google import genai
-
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
-
-client = genai.Client(api_key=os.environ["GEMINI_KEY"])
+from llm_client import generate_text
 
 
 def soll_ist_abweichung_analysieren(
@@ -54,12 +48,7 @@ Antworte AUSSCHLIESSLICH mit validem JSON in genau diesem Format, ohne Markdown-
 Der "index" muss genau der Nummerierung der Ist-Varianten oben entsprechen (ein Eintrag pro
 Variante). Antworte auf {antwortsprache}."""
 
-    response = client.models.generate_content(
-        model="gemini-3-flash-preview",
-        contents=prompt,
-    )
-
-    text = response.text.strip()
+    text = generate_text(prompt)
     if text.startswith("```"):
         text = text.split("\n", 1)[1]
         if text.endswith("```"):

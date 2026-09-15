@@ -19,7 +19,7 @@ export default function Sidebar() {
   return (
     <aside className="fixed top-0 left-0 h-screen w-64 bg-sidebar text-white flex flex-col p-6">
       <div className="flex items-center gap-3 mb-8">
-        <img src="/logo.png" alt="ProcessLens AI" className="w-10 h-10 object-contain" />
+        <img src="/assets/logo.png" alt="ProcessLens AI" className="w-10 h-10 object-contain" />
         <span className="text-lg font-bold">ProcessLens AI</span>
       </div>
 
